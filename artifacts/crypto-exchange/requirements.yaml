@@ -1,0 +1,28 @@
+packages:
+  "framer-motion": "Smooth page transitions and component animations"
+  "recharts": "Portfolio and market data visualization"
+  "date-fns": "Formatting transaction dates"
+  "@hookform/resolvers": "Zod validation integration for forms"
+  "react-hook-form": "Form state management"
+  "zod": "Schema validation for forms"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to cleanly merge tailwind classes"
+
+images:
+  - path: "artifacts/crypto-exchange/public/images/logo.png"
+    description: "Minimal geometric crypto exchange logo mark, resembling a dynamic stacked C and X, bright solid yellow #F0B90B on a completely transparent background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/crypto-exchange/public/images/hero-abstract.png"
+    description: "Abstract 3D crypto coins and geometric shapes floating in dark space with glowing yellow and gold light leaks, professional finance aesthetic, ultra high resolution"
+    aspect_ratio: "16:9"
+  - path: "artifacts/crypto-exchange/public/images/beginner-icon.png"
+    description: "Simple, friendly glowing 3D rocket icon with a soft yellow and white aura, dark background, suitable for a beginner crypto user card"
+    aspect_ratio: "1:1"
+  - path: "artifacts/crypto-exchange/public/images/pro-icon.png"
+    description: "Advanced glowing 3D technical financial candlestick chart icon with sharp geometric details, yellow and green accents on dark background"
+    aspect_ratio: "1:1"
+
+notes:
+  - All API hooks are imported from @workspace/api-client-react based on the provided Orval generation.
+  - Using framer-motion for high-end feel.
+  - Mutations expect `{ data: PayloadType }` structure as per generated Orval client.

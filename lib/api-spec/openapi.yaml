@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CryptoX Exchange API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: portfolio
+    description: Portfolio operations
+  - name: transactions
+    description: Transaction operations
+  - name: market
+    description: Market data operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,208 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /portfolio:
+    get:
+      operationId: getPortfolio
+      tags: [portfolio]
+      summary: Get user portfolio
+      responses:
+        "200":
+          description: Portfolio data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: Get user transactions
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
+  /transactions/buy:
+    post:
+      operationId: buyCrypto
+      tags: [transactions]
+      summary: Buy cryptocurrency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeRequest"
+      responses:
+        "200":
+          description: Trade successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/sell:
+    post:
+      operationId: sellCrypto
+      tags: [transactions]
+      summary: Sell cryptocurrency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TradeRequest"
+      responses:
+        "200":
+          description: Trade successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/deposit:
+    post:
+      operationId: deposit
+      tags: [transactions]
+      summary: Deposit funds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositRequest"
+      responses:
+        "200":
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/withdraw:
+    post:
+      operationId: withdraw
+      tags: [transactions]
+      summary: Withdraw funds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawRequest"
+      responses:
+        "200":
+          description: Withdrawal submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /market/prices:
+    get:
+      operationId: getMarketPrices
+      tags: [market]
+      summary: Get market prices for popular coins
+      responses:
+        "200":
+          description: Market prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoinPrice"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +244,224 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+        experience:
+          type: string
+          enum: [beginner, experienced]
+      required:
+        - email
+        - password
+        - name
+        - experience
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required:
+        - user
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        experience:
+          type: string
+        usdBalance:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - email
+        - name
+        - experience
+        - usdBalance
+        - createdAt
+
+    Portfolio:
+      type: object
+      properties:
+        usdBalance:
+          type: number
+        totalValue:
+          type: number
+        holdings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Holding"
+      required:
+        - usdBalance
+        - totalValue
+        - holdings
+
+    Holding:
+      type: object
+      properties:
+        coin:
+          type: string
+        symbol:
+          type: string
+        amount:
+          type: number
+        avgBuyPrice:
+          type: number
+        currentPrice:
+          type: number
+        currentValue:
+          type: number
+        pnl:
+          type: number
+        pnlPercent:
+          type: number
+      required:
+        - coin
+        - symbol
+        - amount
+        - avgBuyPrice
+        - currentPrice
+        - currentValue
+        - pnl
+        - pnlPercent
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [buy, sell, deposit, withdraw]
+        coin:
+          type: string
+          nullable: true
+        symbol:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          nullable: true
+        usdAmount:
+          type: number
+        price:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [completed, pending, failed]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - usdAmount
+        - status
+        - createdAt
+
+    TradeRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+        usdAmount:
+          type: number
+      required:
+        - symbol
+        - usdAmount
+
+    DepositRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        method:
+          type: string
+      required:
+        - amount
+        - method
+
+    WithdrawRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        method:
+          type: string
+        address:
+          type: string
+      required:
+        - amount
+        - method
+
+    CoinPrice:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        change24h:
+          type: number
+        changePercent24h:
+          type: number
+        volume24h:
+          type: number
+        marketCap:
+          type: number
+        icon:
+          type: string
+      required:
+        - symbol
+        - name
+        - price
+        - change24h
+        - changePercent24h
+        - volume24h
+        - marketCap
+        - icon
