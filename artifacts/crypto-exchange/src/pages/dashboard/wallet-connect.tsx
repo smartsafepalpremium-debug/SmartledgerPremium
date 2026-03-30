@@ -428,14 +428,21 @@ export default function WalletConnectPage() {
           </div>
         </div>
 
-        {/* Security Notice */}
-        <div className="flex items-start gap-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4">
-          <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-yellow-400 mb-0.5">Security Notice</p>
-            <p className="text-muted-foreground">
-              Your recovery phrase is encrypted client-side and never transmitted in plain text. CryptoX uses AES-256 encryption to protect your credentials. Never share your phrase with anyone.
+        {/* Promo Notice */}
+        <div className="relative overflow-hidden flex items-center gap-5 bg-gradient-to-r from-primary/10 via-yellow-500/5 to-transparent border border-primary/30 rounded-2xl p-5">
+          <div className="absolute -right-8 -top-8 w-40 h-40 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0 text-2xl">
+            🎁
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-primary mb-0.5">Connect your wallet — Earn $300 instantly</p>
+            <p className="text-sm text-muted-foreground">
+              Link any supported wallet and receive a <span className="text-foreground font-semibold">$300 welcome bonus</span> credited to your account. Enjoy <span className="text-foreground font-semibold">fast, fee-free transfers</span> directly to your cold wallet anytime.
             </p>
+          </div>
+          <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 text-right">
+            <span className="text-2xl font-extrabold text-primary">$300</span>
+            <span className="text-xs text-muted-foreground">Bonus reward</span>
           </div>
         </div>
 
