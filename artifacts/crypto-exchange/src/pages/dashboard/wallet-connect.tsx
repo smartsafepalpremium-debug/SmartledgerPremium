@@ -147,26 +147,37 @@ function PhraseModal({
   }, [mode, wordCount]);
 
   const handleWordChange = (index: number, value: string) => {
-    const trimmed = value.trim().toLowerCase();
-    // If user pastes a full phrase in one field
-    if (trimmed.includes(" ")) {
-      const pasted = trimmed.split(/\s+/).slice(0, wordCount);
+    // If user pastes a full phrase (contains spaces), distribute across boxes
+    if (value.includes(" ")) {
+      const pasted = value.trim().toLowerCase().split(/\s+/).slice(0, wordCount);
       const next = [...words];
-      pasted.forEach((w, i) => { next[index + i < wordCount ? index + i : i] = w; });
+      pasted.forEach((w, i) => {
+        const target = index + i;
+        if (target < wordCount) next[target] = w;
+      });
       setWords(next);
-      const lastFilled = Math.min(index + pasted.length, wordCount - 1);
+      const lastFilled = Math.min(index + pasted.length - 1, wordCount - 1);
       inputRefs.current[lastFilled]?.focus();
       return;
     }
     const next = [...words];
-    next[index] = trimmed;
+    next[index] = value.toLowerCase();
     setWords(next);
-    if (trimmed && index < wordCount - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    // No auto-advance — user must press Space/Tab/Enter to move to next word
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Advance to next box on Space, Tab, or Enter when current word is filled
+    if ((e.key === " " || e.key === "Enter") && words[index].trim() && index < wordCount - 1) {
+      e.preventDefault();
+      inputRefs.current[index + 1]?.focus();
+      return;
+    }
+    // Tab is handled natively but we still block empty-advance
+    if (e.key === "Tab" && !e.shiftKey && !words[index].trim()) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Backspace" && !words[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
