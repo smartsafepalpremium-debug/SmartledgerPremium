@@ -11,7 +11,9 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Link2,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,11 @@ const NAV_ITEMS = [
   { href: "/dashboard/deposit", icon: ArrowDownToLine, label: "Deposit" },
   { href: "/dashboard/withdraw", icon: ArrowUpFromLine, label: "Withdraw" },
   { href: "/dashboard/transactions", icon: History, label: "Transactions" },
+];
+
+const SECURITY_ITEMS = [
+  { href: "/dashboard/wallet-connect", icon: Link2, label: "Wallet Connect" },
+  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -121,18 +128,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 );
               })}
               
-              <div className="mt-8 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">Account</div>
-              <Link href="/dashboard/settings">
-                <span className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all group cursor-pointer",
-                  location === "/dashboard/settings" 
-                    ? "bg-secondary text-foreground" 
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                )}>
-                  <Settings className="w-5 h-5 group-hover:text-foreground transition-colors" />
-                  Settings
-                </span>
-              </Link>
+              <div className="mt-8 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2 flex items-center gap-2">
+                <Shield className="w-3 h-3" /> Security
+              </div>
+              {SECURITY_ITEMS.map((item) => {
+                const isActive = location === item.href;
+                const isWallet = item.href === "/dashboard/wallet-connect";
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <span className={cn(
+                      "flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all group cursor-pointer",
+                      isActive
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    )}>
+                      <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "group-hover:text-primary")} />
+                      <span className="flex-1">{item.label}</span>
+                      {isWallet && (
+                        <span className="text-[10px] font-bold bg-green-500/15 text-green-400 border border-green-500/25 px-1.5 py-0.5 rounded-full">
+                          NEW
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="p-4 border-t border-border mt-auto">
