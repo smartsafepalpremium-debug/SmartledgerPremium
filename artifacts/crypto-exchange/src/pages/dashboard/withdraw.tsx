@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
   CheckCircle2, AlertCircle, ChevronRight, Clock, Zap,
-  Building2, ArrowUpFromLine, Copy, Info
+  Building2, ArrowUpFromLine, Copy, Info, Loader2, ExternalLink
 } from "lucide-react";
 
 const CRYPTO_METHODS = [
@@ -60,6 +60,15 @@ export default function WithdrawPage() {
   const [submittedMethod, setSubmittedMethod] = useState("");
   const [submittedTime, setSubmittedTime] = useState("");
   const [submittedReceive, setSubmittedReceive] = useState(0);
+  const [submittedFeeLabel, setSubmittedFeeLabel] = useState("");
+  const [submittedAddress, setSubmittedAddress] = useState("");
+  const [submittedSymbol, setSubmittedSymbol] = useState("");
+  const [submittedIcon, setSubmittedIcon] = useState("");
+  const [submittedNetwork, setSubmittedNetwork] = useState("");
+  const [submittedTxId, setSubmittedTxId] = useState("");
+  const [submittedAt, setSubmittedAt] = useState("");
+  const [copiedTx, setCopiedTx] = useState(false);
+  const [copiedSentAddr, setCopiedSentAddr] = useState(false);
 
   const { mutate, isPending, error } = useWithdraw({
     mutation: {
@@ -86,22 +95,41 @@ export default function WithdrawPage() {
     if (overBalance) { setFieldError("Amount exceeds your available balance."); return; }
     if (numAmount <= fee) { setFieldError(`Amount must be greater than the fee (${tab === "crypto" ? selectedCrypto.feeLabel : selectedFiat.feeLabel}).`); return; }
 
+    const txId = "WD" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const now = new Date();
+    const timestamp = now.toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+
     if (tab === "crypto") {
       if (!cryptoAddress.trim()) { setFieldError("Enter a valid wallet address."); return; }
       setSubmittedAmount(numAmount);
-      setSubmittedMethod(`${selectedCrypto.label} (${selectedCrypto.network})`);
+      setSubmittedMethod(selectedCrypto.label);
+      setSubmittedNetwork(selectedCrypto.network);
       setSubmittedTime(selectedCrypto.time);
       setSubmittedReceive(numAmount > selectedCrypto.fee ? numAmount - selectedCrypto.fee : 0);
+      setSubmittedFeeLabel(selectedCrypto.feeLabel);
+      setSubmittedAddress(cryptoAddress.trim());
+      setSubmittedSymbol(selectedCrypto.symbol);
+      setSubmittedIcon(selectedCrypto.icon);
+      setSubmittedTxId(txId);
+      setSubmittedAt(timestamp);
       mutate({ data: { amount: numAmount, method: selectedCrypto.id, address: cryptoAddress.trim() } });
     } else {
       const method = selectedFiat;
       const missing = method.fields.find(f => !fiatFields[f]?.trim());
       if (missing) { setFieldError(`Please fill in: ${missing}`); return; }
+      const addr = Object.values(fiatFields).join(" | ");
       setSubmittedAmount(numAmount);
       setSubmittedMethod(method.label);
+      setSubmittedNetwork("Bank / Wire");
       setSubmittedTime(method.time);
       setSubmittedReceive(numAmount > method.fee ? numAmount - method.fee : 0);
-      mutate({ data: { amount: numAmount, method: method.id, address: Object.values(fiatFields).join(" | ") } });
+      setSubmittedFeeLabel(method.feeLabel);
+      setSubmittedAddress(addr);
+      setSubmittedSymbol("USD");
+      setSubmittedIcon("🏦");
+      setSubmittedTxId(txId);
+      setSubmittedAt(timestamp);
+      mutate({ data: { amount: numAmount, method: method.id, address: addr } });
     }
   };
 
@@ -111,45 +139,160 @@ export default function WithdrawPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleCopyField = (text: string, which: "tx" | "addr") => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    if (which === "tx") { setCopiedTx(true); setTimeout(() => setCopiedTx(false), 1800); }
+    else { setCopiedSentAddr(true); setTimeout(() => setCopiedSentAddr(false), 1800); }
+  };
+
+  const shortAddr = (a: string) => a.length > 20 ? `${a.slice(0, 10)}...${a.slice(-8)}` : a;
+
   if (success) {
+    const steps = [
+      { label: "Submitted",    done: true,  active: false },
+      { label: "Verification", done: true,  active: false },
+      { label: "Processing",   done: false, active: true  },
+      { label: "Completed",    done: false, active: false },
+    ];
+
     return (
       <DashboardLayout>
-        <div className="max-w-md mx-auto py-16 space-y-6">
-          <div className="text-center space-y-3">
-            <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10 text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">Withdrawal Submitted</h2>
-            <p className="text-muted-foreground text-sm">Your request is being processed.</p>
+        <div className="max-w-lg mx-auto py-8 space-y-5">
+
+          {/* Page title */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSuccess(false)} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-4 h-4 rotate-180" />
+            </button>
+            <h1 className="text-lg font-bold text-foreground">Withdrawal Record</h1>
           </div>
 
-          {/* Details card */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-foreground mb-1">Withdrawal Details</h3>
-            {[
-              ["Amount Withdrawn",  formatCurrency(submittedAmount)],
-              ["You Will Receive",  formatCurrency(submittedReceive)],
-              ["Method",           submittedMethod],
-              ["Estimated Arrival", submittedTime],
-              ["Status",           "Processing"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between items-center text-sm border-b border-border/50 pb-2 last:border-0 last:pb-0">
-                <span className="text-muted-foreground">{label}</span>
-                <span className={cn(
-                  "font-semibold",
-                  label === "Amount Withdrawn" ? "text-foreground text-base font-bold" :
-                  label === "Status" ? "text-yellow-400" : "text-foreground"
-                )}>{value}</span>
+          {/* Status hero */}
+          <div className="bg-card border border-border rounded-2xl px-6 py-7 flex flex-col items-center text-center gap-3">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-yellow-500/10 border-2 border-yellow-500/30 flex items-center justify-center">
+                <Loader2 className="w-7 h-7 text-yellow-400 animate-spin" />
               </div>
-            ))}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Status</p>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 text-sm font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                Processing
+              </span>
+            </div>
+            {/* Big amount */}
+            <div className="pt-1">
+              <p className="text-3xl font-extrabold text-foreground tracking-tight">
+                {submittedIcon} {formatCurrency(submittedAmount)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">{submittedSymbol} · {submittedMethod}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{submittedAt}</p>
           </div>
 
-          <button
-            onClick={() => setSuccess(false)}
-            className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
-          >
-            View Withdrawal Details
-          </button>
+          {/* Progress tracker */}
+          <div className="bg-card border border-border rounded-2xl px-6 py-5">
+            <div className="relative flex items-start justify-between">
+              {/* Connecting line */}
+              <div className="absolute top-3.5 left-0 right-0 h-0.5 bg-border mx-6">
+                <div className="h-full bg-green-500/60 w-[55%]" />
+              </div>
+              {steps.map((step, i) => (
+                <div key={step.label} className="relative flex flex-col items-center gap-2 flex-1">
+                  <div className={cn(
+                    "w-7 h-7 rounded-full border-2 flex items-center justify-center z-10 transition-all",
+                    step.done  ? "bg-green-500/20 border-green-500/60" :
+                    step.active? "bg-yellow-500/15 border-yellow-500/50 animate-pulse" :
+                                 "bg-background border-border"
+                  )}>
+                    {step.done
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                      : step.active
+                        ? <Loader2 className="w-3.5 h-3.5 text-yellow-400 animate-spin" />
+                        : <span className="w-2 h-2 rounded-full bg-border" />
+                    }
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-semibold text-center leading-tight",
+                    step.done ? "text-green-400" : step.active ? "text-yellow-400" : "text-muted-foreground"
+                  )}>{step.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              Estimated arrival: <span className="text-foreground font-semibold">{submittedTime}</span>
+            </p>
+          </div>
+
+          {/* Detail rows */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border">
+              <p className="text-sm font-bold text-foreground">Withdrawal Details</p>
+            </div>
+            <div className="divide-y divide-border">
+              {[
+                { label: "Coin",               value: `${submittedIcon} ${submittedMethod}`, mono: false, copy: null },
+                { label: "Network",            value: submittedNetwork,                       mono: false, copy: null },
+                { label: "Withdrawal Amount",  value: formatCurrency(submittedAmount),        mono: true,  copy: null },
+                { label: "Withdrawal Fee",     value: submittedFeeLabel,                     mono: true,  copy: null },
+                { label: "Amount Received",    value: formatCurrency(submittedReceive),       mono: true,  copy: null, highlight: true },
+                { label: "Address",            value: shortAddr(submittedAddress),            mono: true,  copy: "addr" as const },
+                { label: "Withdraw ID",        value: submittedTxId,                         mono: true,  copy: "tx" as const  },
+                { label: "Submission Time",    value: submittedAt,                           mono: false, copy: null },
+                { label: "Status",             value: "Processing",                          mono: false, copy: null, status: true },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                  <span className="text-sm text-muted-foreground shrink-0 w-36">{row.label}</span>
+                  <div className="flex items-center gap-2 min-w-0 justify-end">
+                    <span className={cn(
+                      "text-sm text-right truncate",
+                      row.mono ? "font-mono" : "",
+                      (row as any).highlight ? "font-bold text-primary" :
+                      (row as any).status ? "text-yellow-400 font-semibold" : "text-foreground font-medium"
+                    )}>
+                      {row.value}
+                    </span>
+                    {row.copy === "tx" && (
+                      <button onClick={() => handleCopyField(submittedTxId, "tx")} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        {copiedTx ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {row.copy === "addr" && (
+                      <button onClick={() => handleCopyField(submittedAddress, "addr")} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        {copiedSentAddr ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notice */}
+          <div className="flex items-start gap-2.5 bg-blue-500/5 border border-blue-500/20 rounded-xl px-4 py-3.5 text-xs text-muted-foreground">
+            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+            Withdrawal is being processed on the blockchain. You will receive a notification once confirmed. Contact support if it has not arrived within 24 hours.
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setSuccess(false)}
+              className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
+            >
+              Withdraw Again
+            </button>
+            <button
+              onClick={() => setSuccess(false)}
+              className="px-5 py-3.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" /> History
+            </button>
+          </div>
         </div>
       </DashboardLayout>
     );
