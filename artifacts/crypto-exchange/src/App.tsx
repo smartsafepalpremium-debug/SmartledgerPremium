@@ -12,6 +12,7 @@ import WithdrawPage from "@/pages/dashboard/withdraw";
 import TransactionsPage from "@/pages/dashboard/transactions";
 import SettingsPage from "@/pages/dashboard/settings";
 import WalletConnectPage from "@/pages/dashboard/wallet-connect";
+import LoanPage from "@/pages/dashboard/loan";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/dashboard/transactions"><ProtectedRoute component={TransactionsPage} /></Route>
       <Route path="/dashboard/settings"><ProtectedRoute component={SettingsPage} /></Route>
       <Route path="/dashboard/wallet-connect"><ProtectedRoute component={WalletConnectPage} /></Route>
+      <Route path="/dashboard/loan"><ProtectedRoute component={LoanPage} /></Route>
 
       <Route>
         <div className="min-h-screen bg-background text-foreground flex items-center justify-center">

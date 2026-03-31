@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Link2,
-  Shield
+  Shield,
+  Landmark
 } from "lucide-react";
 import { Button } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/portfolio", icon: Wallet, label: "Portfolio" },
   { href: "/dashboard/deposit", icon: ArrowDownToLine, label: "Deposit" },
   { href: "/dashboard/withdraw", icon: ArrowUpFromLine, label: "Withdraw" },
+  { href: "/dashboard/loan", icon: Landmark, label: "Loans" },
   { href: "/dashboard/transactions", icon: History, label: "Transactions" },
 ];
 

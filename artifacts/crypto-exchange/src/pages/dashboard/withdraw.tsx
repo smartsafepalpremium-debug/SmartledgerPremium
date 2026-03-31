@@ -56,6 +56,10 @@ export default function WithdrawPage() {
   const [success, setSuccess] = useState(false);
   const [fieldError, setFieldError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [submittedAmount, setSubmittedAmount] = useState(0);
+  const [submittedMethod, setSubmittedMethod] = useState("");
+  const [submittedTime, setSubmittedTime] = useState("");
+  const [submittedReceive, setSubmittedReceive] = useState(0);
 
   const { mutate, isPending, error } = useWithdraw({
     mutation: {
@@ -84,11 +88,19 @@ export default function WithdrawPage() {
 
     if (tab === "crypto") {
       if (!cryptoAddress.trim()) { setFieldError("Enter a valid wallet address."); return; }
+      setSubmittedAmount(numAmount);
+      setSubmittedMethod(`${selectedCrypto.label} (${selectedCrypto.network})`);
+      setSubmittedTime(selectedCrypto.time);
+      setSubmittedReceive(numAmount > selectedCrypto.fee ? numAmount - selectedCrypto.fee : 0);
       mutate({ data: { amount: numAmount, method: selectedCrypto.id, address: cryptoAddress.trim() } });
     } else {
       const method = selectedFiat;
       const missing = method.fields.find(f => !fiatFields[f]?.trim());
       if (missing) { setFieldError(`Please fill in: ${missing}`); return; }
+      setSubmittedAmount(numAmount);
+      setSubmittedMethod(method.label);
+      setSubmittedTime(method.time);
+      setSubmittedReceive(numAmount > method.fee ? numAmount - method.fee : 0);
       mutate({ data: { amount: numAmount, method: method.id, address: Object.values(fiatFields).join(" | ") } });
     }
   };
@@ -102,17 +114,41 @@ export default function WithdrawPage() {
   if (success) {
     return (
       <DashboardLayout>
-        <div className="max-w-lg mx-auto text-center py-20 space-y-5">
-          <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-green-400" />
+        <div className="max-w-md mx-auto py-16 space-y-6">
+          <div className="text-center space-y-3">
+            <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10 text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">Withdrawal Submitted</h2>
+            <p className="text-muted-foreground text-sm">Your request is being processed.</p>
           </div>
-          <h2 className="text-2xl font-bold text-foreground">Withdrawal Submitted</h2>
-          <p className="text-muted-foreground text-sm">
-            Your withdrawal of <span className="text-foreground font-semibold">{formatCurrency(numAmount)}</span> has been submitted and is being processed.
-            Estimated arrival: <span className="text-foreground font-semibold">{tab === "crypto" ? selectedCrypto.time : selectedFiat.time}</span>.
-          </p>
-          <button onClick={() => setSuccess(false)} className="px-6 py-3 rounded-xl border border-border text-sm font-semibold hover:bg-secondary transition-colors">
-            Make another withdrawal
+
+          {/* Details card */}
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+            <h3 className="text-sm font-bold text-foreground mb-1">Withdrawal Details</h3>
+            {[
+              ["Amount Withdrawn",  formatCurrency(submittedAmount)],
+              ["You Will Receive",  formatCurrency(submittedReceive)],
+              ["Method",           submittedMethod],
+              ["Estimated Arrival", submittedTime],
+              ["Status",           "Processing"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between items-center text-sm border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                <span className="text-muted-foreground">{label}</span>
+                <span className={cn(
+                  "font-semibold",
+                  label === "Amount Withdrawn" ? "text-foreground text-base font-bold" :
+                  label === "Status" ? "text-yellow-400" : "text-foreground"
+                )}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setSuccess(false)}
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
+          >
+            View Withdrawal Details
           </button>
         </div>
       </DashboardLayout>
