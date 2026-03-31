@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
   Copy, CheckCircle2, ArrowDownToLine, Clock, ShieldCheck,
-  AlertTriangle, ChevronRight, Info, RefreshCw
+  AlertTriangle, ChevronRight, Info, RefreshCw, Loader2, ExternalLink
 } from "lucide-react";
 
 const CRYPTO_NETWORKS = [
@@ -194,6 +194,16 @@ export default function DepositPage() {
   const [success, setSuccess] = useState(false);
   const [submittedAmount, setSubmittedAmount] = useState(0);
   const [submittedCoin, setSubmittedCoin] = useState("");
+  const [submittedNetwork, setSubmittedNetwork] = useState("");
+  const [submittedIcon, setSubmittedIcon] = useState("");
+  const [submittedSymbol, setSubmittedSymbol] = useState("");
+  const [submittedAddress, setSubmittedAddress] = useState("");
+  const [submittedConfirmations, setSubmittedConfirmations] = useState(0);
+  const [submittedTime, setSubmittedTime] = useState("");
+  const [submittedTxId, setSubmittedTxId] = useState("");
+  const [submittedAt, setSubmittedAt] = useState("");
+  const [copiedTx, setCopiedTx] = useState(false);
+  const [copiedDepAddr, setCopiedDepAddr] = useState(false);
 
   const { mutate, isPending } = useDeposit({
     mutation: {
@@ -218,47 +228,182 @@ export default function DepositPage() {
     }
   };
 
+  const handleCopyField = (text: string, which: "tx" | "addr") => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    if (which === "tx") { setCopiedTx(true); setTimeout(() => setCopiedTx(false), 1800); }
+    else { setCopiedDepAddr(true); setTimeout(() => setCopiedDepAddr(false), 1800); }
+  };
+
+  const shortAddr = (a: string) => a.length > 20 ? `${a.slice(0, 10)}...${a.slice(-8)}` : a;
+
   const handleConfirmSent = () => {
     const num = parseFloat(amount);
     if (!num || num <= 0) return;
+    const txId = "DP" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const now = new Date();
+    const timestamp = now.toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
     setSubmittedAmount(num);
-    setSubmittedCoin(`${selected.label} (${selected.network})`);
+    setSubmittedCoin(selected.label);
+    setSubmittedNetwork(selected.network);
+    setSubmittedIcon(selected.icon);
+    setSubmittedSymbol(selected.symbol);
+    setSubmittedAddress(selected.address);
+    setSubmittedConfirmations(selected.confirmations);
+    setSubmittedTime(selected.time);
+    setSubmittedTxId(txId);
+    setSubmittedAt(timestamp);
     mutate({ data: { amount: num, method: selected.id, address: selected.address } });
   };
 
   if (success) {
+    const steps = [
+      { label: "Pending",      done: true,  active: false },
+      { label: "Confirming",   done: false, active: true  },
+      { label: "Credited",     done: false, active: false },
+    ];
+
     return (
       <DashboardLayout>
-        <div className="max-w-md mx-auto py-16 space-y-6">
-          <div className="text-center space-y-3">
-            <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10 text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">Deposit Received</h2>
-            <p className="text-muted-foreground text-sm">Your deposit is being confirmed on-chain.</p>
+        <div className="max-w-lg mx-auto py-8 space-y-5">
+
+          {/* Page title */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSuccess(false)} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+              <ChevronRight className="w-4 h-4 rotate-180" />
+            </button>
+            <h1 className="text-lg font-bold text-foreground">Deposit Record</h1>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-foreground mb-1">Deposit Details</h3>
-            {[
-              ["Amount",   formatCurrency(submittedAmount)],
-              ["Network",  submittedCoin],
-              ["Status",   "Awaiting Confirmations"],
-              ["ETA",      selected.time],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between items-center text-sm border-b border-border/50 pb-2 last:border-0 last:pb-0">
-                <span className="text-muted-foreground">{label}</span>
-                <span className={cn("font-semibold", label === "Status" ? "text-yellow-400" : "text-foreground")}>{value}</span>
+          {/* Status hero */}
+          <div className="bg-card border border-border rounded-2xl px-6 py-7 flex flex-col items-center text-center gap-3">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-blue-500/10 border-2 border-blue-500/30 flex items-center justify-center">
+                <Loader2 className="w-7 h-7 text-blue-400 animate-spin" />
               </div>
-            ))}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Status</p>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400 text-sm font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Awaiting Confirmations
+              </span>
+            </div>
+            {/* Big amount */}
+            <div className="pt-1">
+              <p className="text-3xl font-extrabold text-foreground tracking-tight">
+                {submittedIcon} {formatCurrency(submittedAmount)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">{submittedSymbol} · {submittedCoin}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{submittedAt}</p>
           </div>
 
-          <button
-            onClick={() => setSuccess(false)}
-            className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
-          >
-            Make Another Deposit
-          </button>
+          {/* Progress tracker */}
+          <div className="bg-card border border-border rounded-2xl px-6 py-5">
+            <div className="relative flex items-start justify-between">
+              {/* Connecting line */}
+              <div className="absolute top-3.5 left-0 right-0 h-0.5 bg-border mx-8">
+                <div className="h-full bg-green-500/60 w-[35%]" />
+              </div>
+              {steps.map((step) => (
+                <div key={step.label} className="relative flex flex-col items-center gap-2 flex-1">
+                  <div className={cn(
+                    "w-7 h-7 rounded-full border-2 flex items-center justify-center z-10 transition-all",
+                    step.done   ? "bg-green-500/20 border-green-500/60" :
+                    step.active ? "bg-blue-500/15 border-blue-500/50 animate-pulse" :
+                                  "bg-background border-border"
+                  )}>
+                    {step.done
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                      : step.active
+                        ? <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                        : <span className="w-2 h-2 rounded-full bg-border" />
+                    }
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-semibold text-center",
+                    step.done ? "text-green-400" : step.active ? "text-blue-400" : "text-muted-foreground"
+                  )}>{step.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-center space-y-1">
+              <p className="text-xs text-muted-foreground">
+                Confirmations required: <span className="text-foreground font-semibold">0 / {submittedConfirmations}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Estimated credit time: <span className="text-foreground font-semibold">{submittedTime}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Detail rows */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border">
+              <p className="text-sm font-bold text-foreground">Deposit Details</p>
+            </div>
+            <div className="divide-y divide-border">
+              {[
+                { label: "Coin",              value: `${submittedIcon} ${submittedCoin}`,    mono: false, copy: null },
+                { label: "Network",           value: submittedNetwork,                        mono: false, copy: null },
+                { label: "Deposit Amount",    value: formatCurrency(submittedAmount),         mono: true,  copy: null, highlight: true },
+                { label: "Deposit Address",   value: shortAddr(submittedAddress),             mono: true,  copy: "addr" as const },
+                { label: "Deposit ID",        value: submittedTxId,                           mono: true,  copy: "tx"   as const },
+                { label: "Confirmations",     value: `0 / ${submittedConfirmations}`,         mono: false, copy: null },
+                { label: "Submission Time",   value: submittedAt,                             mono: false, copy: null },
+                { label: "Status",            value: "Awaiting Confirmations",                mono: false, copy: null, status: true },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-between px-5 py-3.5 gap-4">
+                  <span className="text-sm text-muted-foreground shrink-0 w-36">{row.label}</span>
+                  <div className="flex items-center gap-2 min-w-0 justify-end">
+                    <span className={cn(
+                      "text-sm text-right truncate",
+                      row.mono ? "font-mono" : "",
+                      (row as any).highlight ? "font-bold text-primary" :
+                      (row as any).status    ? "text-blue-400 font-semibold" : "text-foreground font-medium"
+                    )}>
+                      {row.value}
+                    </span>
+                    {row.copy === "tx" && (
+                      <button onClick={() => handleCopyField(submittedTxId, "tx")} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        {copiedTx ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                    {row.copy === "addr" && (
+                      <button onClick={() => handleCopyField(submittedAddress, "addr")} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        {copiedDepAddr ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notice */}
+          <div className="flex items-start gap-2.5 bg-blue-500/5 border border-blue-500/20 rounded-xl px-4 py-3.5 text-xs text-muted-foreground">
+            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+            Your deposit will be credited automatically once the required confirmations are reached on-chain. Contact support if it has not arrived within 24 hours.
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setSuccess(false)}
+              className="flex-1 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
+            >
+              View Details
+            </button>
+            <button
+              onClick={() => setSuccess(false)}
+              className="px-5 py-3.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" /> History
+            </button>
+          </div>
         </div>
       </DashboardLayout>
     );
