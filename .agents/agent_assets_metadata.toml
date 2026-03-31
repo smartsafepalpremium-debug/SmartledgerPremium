@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "TMWpGZrg-Js4Fl9rsx7Y-"
+uri = "file://artifacts/crypto-exchange/public/images/logo.png"
+type = "image"
+title = "smartledger-premium-logo"

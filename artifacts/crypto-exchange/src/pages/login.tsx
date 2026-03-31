@@ -44,7 +44,7 @@ export default function LoginPage() {
           <Card className="p-8 backdrop-blur-xl bg-card/90">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-display font-bold text-foreground">Welcome Back</h1>
-              <p className="text-muted-foreground mt-2">Log in to your CryptoX account</p>
+              <p className="text-muted-foreground mt-2">Log in to your Smartledger-premium account</p>
             </div>
 
             {error && (

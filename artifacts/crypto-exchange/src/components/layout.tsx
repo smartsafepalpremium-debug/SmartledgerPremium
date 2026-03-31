@@ -30,9 +30,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       <header className="container mx-auto px-6 py-6 flex items-center justify-between relative z-10">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:border-primary/50 transition-colors">
-            <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="CryptoX" className="w-6 h-6 object-contain" />
+            <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Smartledger-premium" className="w-6 h-6 object-contain" />
           </div>
-          <span className="font-display font-bold text-xl tracking-wide">CryptoX</span>
+          <span className="font-display font-bold text-xl tracking-wide">Smartledger-premium</span>
         </Link>
         <nav className="flex items-center gap-4">
           <Link href="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2">
@@ -80,8 +80,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card z-50">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="CryptoX" className="w-8 h-8" />
-          <span className="font-display font-bold text-lg">CryptoX</span>
+          <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Smartledger-premium" className="w-8 h-8" />
+          <span className="font-display font-bold text-lg">Smartledger-premium</span>
         </Link>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-muted-foreground">
           {isMobileMenuOpen ? <X /> : <Menu />}
@@ -105,9 +105,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="p-6 hidden md:block">
               <Link href="/dashboard" className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="CryptoX" className="w-5 h-5 object-contain" />
+                  <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Smartledger-premium" className="w-5 h-5 object-contain" />
                 </div>
-                <span className="font-display font-bold text-xl">CryptoX</span>
+                <span className="font-display font-bold text-xl">Smartledger-premium</span>
               </Link>
             </div>
 

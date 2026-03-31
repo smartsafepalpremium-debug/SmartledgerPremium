@@ -23,7 +23,7 @@ export default function LandingPage() {
             Buy, trade, and hold <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">crypto</span> securely.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0">
-            CryptoX provides a professional, high-liquidity environment for both beginners and institutional traders. Choose your path to get started.
+            Smartledger-premium provides a professional, high-liquidity environment for both beginners and institutional traders. Choose your path to get started.
           </p>
 
           <div className="grid grid-cols-2 gap-6 max-w-md mx-auto lg:mx-0 text-left">
