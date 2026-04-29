@@ -75,7 +75,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground ml-1">Email</label>
-                <Input {...register("email")} placeholder="you@gmail.com" type="email" />
+                <Input {...register("email")} type="email" />
                 {errors.email && <p className="text-destructive text-sm ml-1">{errors.email.message}</p>}
               </div>
 

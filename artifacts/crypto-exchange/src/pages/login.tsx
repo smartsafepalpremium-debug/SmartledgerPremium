@@ -59,7 +59,6 @@ export default function LoginPage() {
                 <label className="text-sm font-medium text-foreground ml-1">Email</label>
                 <Input 
                   {...register("email")} 
-                  placeholder="you@gmail.com" 
                   autoComplete="email"
                 />
                 {errors.email && <p className="text-destructive text-sm ml-1">{errors.email.message}</p>}
