@@ -9,7 +9,9 @@ import { Link } from "wouter";
 export default function DashboardOverview() {
   const { user } = useAuth();
   const { data: portfolio, isLoading: portfolioLoading } = useGetPortfolio();
-  const { data: marketData, isLoading: marketLoading } = useGetMarketPrices();
+  const { data: marketData, isLoading: marketLoading } = useGetMarketPrices({
+    query: { refetchInterval: 5000, refetchOnWindowFocus: true },
+  });
 
   if (!user) return null;
 

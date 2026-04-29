@@ -345,7 +345,9 @@ function PlanModal({ plan, onClose, userBalance, onSuccess }: {
 export default function InvestPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: markets, isLoading } = useGetMarketPrices();
+  const { data: markets, isLoading } = useGetMarketPrices({
+    query: { refetchInterval: 5000, refetchOnWindowFocus: true },
+  });
   const { data: portfolio } = useGetPortfolio();
 
   const [activeTab, setActiveTab] = useState<"plans" | "trade">("plans");
