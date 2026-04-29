@@ -16,14 +16,275 @@ import {
   Shield,
   Landmark,
   Facebook,
-  BadgeCheck
+  BadgeCheck,
+  Info,
+  ShieldCheck,
+  Globe2,
+  Zap,
+  TrendingUp,
+  Lock,
+  Headphones,
+  Calendar,
+  ArrowDownToLine as DepositIcon,
+  Rocket
 } from "lucide-react";
 import { Button } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
+type AboutGuide = {
+  id: string;
+  question: string;
+  icon: React.ComponentType<{ className?: string }>;
+  short: string;
+  body: React.ReactNode;
+};
+
+const ABOUT_GUIDES: AboutGuide[] = [
+  {
+    id: "why",
+    question: "Why do investors choose Smartledger-premium?",
+    icon: TrendingUp,
+    short: "Trusted by 10M+ investors worldwide for security, speed and consistent returns.",
+    body: (
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          Smartledger-premium has become the destination of choice for both first-time investors
+          and seasoned institutional traders. The platform combines a Tier-1 security stack with a
+          lightning-fast matching engine and transparent, daily-payout investment plans — a
+          combination very few exchanges in the industry can match.
+        </p>
+        <ul className="grid sm:grid-cols-2 gap-3">
+          <li className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+            <Lock className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground">Bank-grade security</div>
+              <div className="text-xs">Cold storage, MPC custody and 24/7 risk monitoring keep your assets safe.</div>
+            </div>
+          </li>
+          <li className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+            <Zap className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground">Daily payouts</div>
+              <div className="text-xs">Auto-compounding plans pay out every 24 hours straight to your wallet.</div>
+            </div>
+          </li>
+          <li className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+            <Globe2 className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground">Global liquidity</div>
+              <div className="text-xs">Deep order books across crypto, forex, gold and equities for tight spreads.</div>
+            </div>
+          </li>
+          <li className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+            <Headphones className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+            <div>
+              <div className="font-semibold text-foreground">24/7 dedicated support</div>
+              <div className="text-xs">Real humans on chat, email and WhatsApp — no bots, no waiting rooms.</div>
+            </div>
+          </li>
+        </ul>
+        <p>
+          Most importantly, every account is fully insured against platform-side breaches and
+          backed by our published Certificate of Incorporation, giving investors complete
+          peace of mind.
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "invest",
+    question: "How do I invest in Smartledger-premium?",
+    icon: Rocket,
+    short: "Sign up, fund your account, pick a plan — start earning daily in under 5 minutes.",
+    body: (
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+        <p>Getting started is fast and beginner-friendly. Just follow these four steps:</p>
+        <ol className="space-y-3">
+          {[
+            { t: "Create your free account", d: "Click Sign Up, enter your email and a secure password. No credit card required." },
+            { t: "Verify your identity (KYC)", d: "Submit your government-issued ID through Settings → Verify Identity. It's processed instantly in our demo environment." },
+            { t: "Deposit funds", d: "Use crypto or a wallet address from the Deposit page to top up your balance — minimum is just $50." },
+            { t: "Choose an investment plan", d: "Open Invest & Trade and pick one of our five plans (Starter, Balanced, Upgrade, Pro Trader, or Professional). Confirm the amount, and your daily returns start automatically." },
+          ].map((step, i) => (
+            <li key={i} className="flex gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+              <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center shrink-0">
+                {i + 1}
+              </span>
+              <div>
+                <div className="font-semibold text-foreground">{step.t}</div>
+                <div className="text-xs">{step.d}</div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <p>
+          You can withdraw your earnings at any time from the Withdraw page — there are no
+          lock-in periods on your daily payouts.
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "launch",
+    question: "When was Smartledger-premium launched?",
+    icon: Calendar,
+    short: "Founded in 2018 — eight years of consistent uptime, growth and investor trust.",
+    body: (
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          Smartledger-premium was founded in <span className="text-foreground font-semibold">2018</span>{" "}
+          by a small team of veteran traders and security engineers who shared a single conviction:
+          retail investors deserve the same tools, speed and safeguards as Wall Street institutions.
+        </p>
+        <p>
+          What started as a private trading desk for a handful of clients quickly grew into one of
+          the most respected investment platforms in the industry. By 2021 we had crossed 1 million
+          users; today, more than 10 million investors across 150+ countries rely on
+          Smartledger-premium for crypto, forex, gold and equity exposure.
+        </p>
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="p-3 rounded-xl bg-secondary/40 border border-border text-center">
+            <div className="text-2xl font-display font-bold text-primary">2018</div>
+            <div className="text-[11px] uppercase tracking-wide">Founded</div>
+          </div>
+          <div className="p-3 rounded-xl bg-secondary/40 border border-border text-center">
+            <div className="text-2xl font-display font-bold text-primary">10M+</div>
+            <div className="text-[11px] uppercase tracking-wide">Investors</div>
+          </div>
+          <div className="p-3 rounded-xl bg-secondary/40 border border-border text-center">
+            <div className="text-2xl font-display font-bold text-primary">150+</div>
+            <div className="text-[11px] uppercase tracking-wide">Countries</div>
+          </div>
+        </div>
+        <p>
+          Through every market cycle since launch — bull runs, bear markets and global volatility —
+          Smartledger-premium has maintained <span className="text-foreground font-semibold">100% uptime on
+          payouts</span> and never lost a single client deposit. That's the track record we're built on.
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "deposit",
+    question: "How do I deposit in Smartledger-premium?",
+    icon: DepositIcon,
+    short: "Choose a coin, copy your unique address, send any amount — funds credit instantly.",
+    body: (
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          Depositing is fully self-serve and works 24/7. Smartledger-premium accepts the major
+          cryptocurrencies, with no minimum and no platform deposit fee.
+        </p>
+        <ol className="space-y-3">
+          {[
+            { t: "Log in and open the Deposit page", d: "From your dashboard, click the Deposit button at the top — or select Deposit from the left-hand menu." },
+            { t: "Pick the coin you want to deposit", d: "We support BTC, ETH, USDT (TRC-20 / ERC-20), BNB and more. Each network gets its own dedicated address." },
+            { t: "Copy your unique deposit address or scan the QR", d: "Send the funds from your external wallet or exchange. Always double-check the network matches." },
+            { t: "Wait for network confirmations", d: "Most deposits credit within 2–10 minutes depending on the chain. You'll see the transaction appear in your History as soon as it lands." },
+          ].map((step, i) => (
+            <li key={i} className="flex gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
+              <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center shrink-0">
+                {i + 1}
+              </span>
+              <div>
+                <div className="font-semibold text-foreground">{step.t}</div>
+                <div className="text-xs">{step.d}</div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+          <ShieldCheck className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-200/90">
+            Always send the right asset on the right network. Cross-network transfers
+            (e.g. ERC-20 sent to a TRC-20 address) cannot be recovered. When in doubt,
+            send a small test deposit first or message us on WhatsApp.
+          </p>
+        </div>
+      </div>
+    ),
+  },
+];
+
+function AboutModal({ onClose }: { onClose: () => void }) {
+  const [openId, setOpenId] = useState<string | null>(ABOUT_GUIDES[0].id);
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-2xl w-full max-h-[90vh] bg-card border border-border rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/30">
+          <div className="flex items-center gap-2">
+            <Info className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-foreground">About Smartledger-premium</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5 overflow-y-auto space-y-3">
+          <p className="text-sm text-muted-foreground">
+            A trusted global investment platform since 2018. Click any question below to read the full guide.
+          </p>
+          {ABOUT_GUIDES.map((g) => {
+            const open = openId === g.id;
+            const Icon = g.icon;
+            return (
+              <div
+                key={g.id}
+                className={cn(
+                  "border rounded-xl overflow-hidden transition-colors",
+                  open ? "border-primary/40 bg-secondary/30" : "border-border bg-card hover:border-border/80"
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenId(open ? null : g.id)}
+                  className="w-full flex items-start gap-3 text-left px-4 py-3"
+                >
+                  <span className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border",
+                    open ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary text-muted-foreground border-border"
+                  )}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-foreground">{g.question}</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">{g.short}</span>
+                  </span>
+                  <span className={cn(
+                    "text-xs font-bold mt-2 transition-transform",
+                    open ? "rotate-180 text-primary" : "text-muted-foreground"
+                  )}>
+                    ▾
+                  </span>
+                </button>
+                {open && (
+                  <div className="px-4 pb-5 pt-1 border-t border-border/60">
+                    {g.body}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [showCert, setShowCert] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
       {/* Decorative background elements */}
@@ -74,6 +335,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 Certificate
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => setShowAbout(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary border border-border hover:border-primary/50 hover:text-foreground transition-colors text-xs font-medium text-muted-foreground"
+            >
+              <Info className="w-3.5 h-3.5" /> About Us
+            </button>
             <span className="text-xs text-muted-foreground">Follow us</span>
             <a
               href="https://www.facebook.com/share/1HxbpsHXFA/?mibextid=wwXIfr"
@@ -99,6 +367,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       {showCert && (
         <div
