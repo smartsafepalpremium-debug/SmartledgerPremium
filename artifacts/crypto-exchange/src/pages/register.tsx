@@ -69,7 +69,7 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground ml-1">Full Name</label>
-                <Input {...register("name")} placeholder="Satoshi Nakamoto" />
+                <Input {...register("name")} />
                 {errors.name && <p className="text-destructive text-sm ml-1">{errors.name.message}</p>}
               </div>
 
@@ -81,7 +81,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground ml-1">Password</label>
-                <Input {...register("password")} type="password" placeholder="••••••••" />
+                <Input {...register("password")} type="password" />
                 {errors.password && <p className="text-destructive text-sm ml-1">{errors.password.message}</p>}
               </div>
 

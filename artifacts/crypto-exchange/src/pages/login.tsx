@@ -72,7 +72,6 @@ export default function LoginPage() {
                 <Input 
                   {...register("password")} 
                   type="password" 
-                  placeholder="••••••••" 
                   autoComplete="current-password"
                 />
                 {errors.password && <p className="text-destructive text-sm ml-1">{errors.password.message}</p>}
