@@ -37,18 +37,34 @@ export interface LoginRequest {
   password: string;
 }
 
+export type UserKycStatus = (typeof UserKycStatus)[keyof typeof UserKycStatus];
+
+export const UserKycStatus = {
+  unverified: "unverified",
+  pending: "pending",
+  verified: "verified",
+} as const;
+
 export interface User {
   id: number;
   email: string;
   name: string;
   experience: string;
   usdBalance: number;
+  kycStatus: UserKycStatus;
   createdAt: string;
 }
 
 export interface AuthResponse {
   user: User;
   message: string;
+}
+
+export interface KycSubmitRequest {
+  fullName: string;
+  dateOfBirth: string;
+  country: string;
+  idNumber: string;
 }
 
 export interface Holding {

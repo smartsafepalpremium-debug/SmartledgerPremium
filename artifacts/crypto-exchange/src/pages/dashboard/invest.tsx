@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout";
 import { Card, Button, Input } from "@/components/ui/shared";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetMarketPrices, useBuyCrypto, useSellCrypto, useGetPortfolio, useDeposit } from "@workspace/api-client-react";
+import { useGetMarketPrices, useGetForexPrices, useBuyCrypto, useSellCrypto, useGetPortfolio, useDeposit } from "@workspace/api-client-react";
 import { formatCurrency, formatPercent, cn, formatCrypto } from "@/lib/utils";
 import {
   Search, TrendingUp, TrendingDown, Zap, Shield, Rocket, Crown, Star,
@@ -366,12 +366,22 @@ function PlanModal({ plan, onClose, userBalance, onSuccess }: {
 export default function InvestPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: markets, isLoading } = useGetMarketPrices({
+  const { data: cryptoMarkets } = useGetMarketPrices({
     query: { refetchInterval: 5000, refetchOnWindowFocus: true },
   });
+  const { data: forexMarkets, isLoading: forexLoading } = useGetForexPrices({
+    query: { refetchInterval: 15000, refetchOnWindowFocus: true },
+  });
+  const markets = forexMarkets;
+  const isLoading = forexLoading;
   const { data: portfolio } = useGetPortfolio();
 
-  const [activeTab, setActiveTab] = useState<"plans" | "trade">("plans");
+  const initialTab: "plans" | "trade" =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "trade"
+      ? "trade"
+      : "plans";
+  const [activeTab, setActiveTab] = useState<"plans" | "trade">(initialTab);
+  void cryptoMarkets;
   const [openPlan, setOpenPlan] = useState<Plan | null>(null);
   const [activePlans, setActivePlans] = useState<Record<string, number>>({});
 
@@ -470,7 +480,7 @@ export default function InvestPage() {
                 activeTab === "trade" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Spot Trade
+              Forex & Gold
             </button>
           </div>
           <span className="text-sm text-muted-foreground">
@@ -609,11 +619,16 @@ export default function InvestPage() {
             {/* Markets List */}
             <div className="flex-1 flex flex-col min-h-0 bg-card rounded-2xl border border-border overflow-hidden">
               <div className="p-4 border-b border-border space-y-4">
-                <h2 className="text-xl font-bold">Markets</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-xl font-bold">Forex, Gold & Stocks</h2>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20 text-success text-[10px] font-bold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
+                  </span>
+                </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search coin..."
+                    placeholder="Search pair (XAUUSD, EURUSD, AAPL...)"
                     className="pl-10 h-10"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
@@ -713,9 +728,24 @@ export default function InvestPage() {
                       </div>
                       {tradeSuccess && <div className="text-green-400 text-sm text-center p-2 bg-green-500/10 rounded-lg font-medium">{tradeSuccess}</div>}
                       {tradeError && <div className="text-red-400 text-sm text-center p-2 bg-red-500/10 rounded-lg font-medium">{tradeError}</div>}
-                      <Button type="submit" className={cn("w-full h-14 text-lg font-bold", tradeType === "buy" ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white")} disabled={isPending || !watchUsdAmount}>
-                        {isPending ? "Processing..." : `${tradeType === "buy" ? "Buy" : "Sell"} ${selectedCoin.symbol}`}
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-14 px-5 font-semibold"
+                          disabled={isPending}
+                          onClick={() => {
+                            reset();
+                            setTradeSuccess(null);
+                            setTradeError(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" className={cn("flex-1 h-14 text-lg font-bold", tradeType === "buy" ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white")} disabled={isPending || !watchUsdAmount}>
+                          {isPending ? "Processing..." : `${tradeType === "buy" ? "Buy" : "Sell"} ${selectedCoin.symbol}`}
+                        </Button>
+                      </div>
                     </form>
                   </div>
                 </Card>

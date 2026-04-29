@@ -39,6 +39,7 @@ export const LoginResponse = zod.object({
     name: zod.string(),
     experience: zod.string(),
     usdBalance: zod.number(),
+    kycStatus: zod.enum(["unverified", "pending", "verified"]),
     createdAt: zod.string(),
   }),
   message: zod.string(),
@@ -60,6 +61,27 @@ export const GetMeResponse = zod.object({
   name: zod.string(),
   experience: zod.string(),
   usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Submit KYC verification
+ */
+export const SubmitKycBody = zod.object({
+  fullName: zod.string(),
+  dateOfBirth: zod.string(),
+  country: zod.string(),
+  idNumber: zod.string(),
+});
+
+export const SubmitKycResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified"]),
   createdAt: zod.string(),
 });
 
@@ -194,3 +216,18 @@ export const GetMarketPricesResponseItem = zod.object({
   icon: zod.string(),
 });
 export const GetMarketPricesResponse = zod.array(GetMarketPricesResponseItem);
+
+/**
+ * @summary Get live forex, gold and stock prices
+ */
+export const GetForexPricesResponseItem = zod.object({
+  symbol: zod.string(),
+  name: zod.string(),
+  price: zod.number(),
+  change24h: zod.number(),
+  changePercent24h: zod.number(),
+  volume24h: zod.number(),
+  marketCap: zod.number(),
+  icon: zod.string(),
+});
+export const GetForexPricesResponse = zod.array(GetForexPricesResponseItem);

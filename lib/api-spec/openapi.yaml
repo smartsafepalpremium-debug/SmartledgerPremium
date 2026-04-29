@@ -115,6 +115,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/kyc/verify:
+    post:
+      operationId: submitKyc
+      tags: [auth]
+      summary: Submit KYC verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycSubmitRequest"
+      responses:
+        "200":
+          description: KYC submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /portfolio:
     get:
       operationId: getPortfolio
@@ -234,6 +259,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/CoinPrice"
 
+  /market/forex:
+    get:
+      operationId: getForexPrices
+      tags: [market]
+      summary: Get live forex, gold and stock prices
+      responses:
+        "200":
+          description: Forex / commodities / stock prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoinPrice"
+
 components:
   schemas:
     HealthStatus:
@@ -313,6 +353,9 @@ components:
           type: string
         usdBalance:
           type: number
+        kycStatus:
+          type: string
+          enum: [unverified, pending, verified]
         createdAt:
           type: string
       required:
@@ -321,7 +364,25 @@ components:
         - name
         - experience
         - usdBalance
+        - kycStatus
         - createdAt
+
+    KycSubmitRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        country:
+          type: string
+        idNumber:
+          type: string
+      required:
+        - fullName
+        - dateOfBirth
+        - country
+        - idNumber
 
     Portfolio:
       type: object

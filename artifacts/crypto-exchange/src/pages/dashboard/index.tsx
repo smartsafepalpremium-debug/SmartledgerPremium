@@ -4,7 +4,7 @@ import { Card, Button } from "@/components/ui/shared";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetPortfolio, useGetMarketPrices } from "@workspace/api-client-react";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, ExternalLink, Radio } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, ExternalLink, Radio, ArrowUpFromLine, Repeat } from "lucide-react";
 import { Link } from "wouter";
 
 function LivePrice({ value }: { value: number }) {
@@ -45,15 +45,29 @@ export default function DashboardOverview() {
       <div className="space-y-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Overview</h1>
+            <h1 className="text-3xl font-display font-bold">Dashboard</h1>
             <p className="text-muted-foreground mt-1">Welcome back, {user.name}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Link href="/dashboard/deposit">
-              <Button variant="secondary" className="font-semibold">Deposit</Button>
+              <Button variant="secondary" className="font-semibold gap-1.5">
+                <Wallet className="w-4 h-4" /> Deposit
+              </Button>
+            </Link>
+            <Link href="/dashboard/withdraw">
+              <Button variant="secondary" className="font-semibold gap-1.5">
+                <ArrowUpFromLine className="w-4 h-4" /> Withdraw
+              </Button>
+            </Link>
+            <Link href="/dashboard/invest?tab=trade">
+              <Button variant="secondary" className="font-semibold gap-1.5">
+                <Repeat className="w-4 h-4" /> Convert
+              </Button>
             </Link>
             <Link href="/dashboard/invest">
-              <Button className="font-semibold">Trade</Button>
+              <Button className="font-semibold gap-1.5">
+                <ArrowRightLeft className="w-4 h-4" /> Trade
+              </Button>
             </Link>
           </div>
         </header>

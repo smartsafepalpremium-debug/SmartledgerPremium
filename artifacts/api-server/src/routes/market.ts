@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
+import { fetchForexPrices } from "../lib/forex";
 
 const router: IRouter = Router();
 
@@ -111,6 +112,16 @@ router.get("/prices", async (req, res) => {
       icon: c.icon,
     }));
     res.json(fallback);
+  }
+});
+
+router.get("/forex", async (req, res) => {
+  try {
+    const data = await fetchForexPrices(req);
+    res.json(data);
+  } catch (err) {
+    req.log.error({ err }, "failed to fetch forex prices");
+    res.status(500).json({ error: "Failed to load forex markets" });
   }
 });
 

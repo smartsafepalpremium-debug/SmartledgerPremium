@@ -22,6 +22,7 @@ import type {
   DepositRequest,
   ErrorResponse,
   HealthStatus,
+  KycSubmitRequest,
   LoginRequest,
   MessageResponse,
   Portfolio,
@@ -431,6 +432,92 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Submit KYC verification
+ */
+export const getSubmitKycUrl = () => {
+  return `/api/auth/kyc/verify`;
+};
+
+export const submitKyc = async (
+  kycSubmitRequest: KycSubmitRequest,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getSubmitKycUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(kycSubmitRequest),
+  });
+};
+
+export const getSubmitKycMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitKyc>>,
+    TError,
+    { data: BodyType<KycSubmitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitKyc>>,
+  TError,
+  { data: BodyType<KycSubmitRequest> },
+  TContext
+> => {
+  const mutationKey = ["submitKyc"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitKyc>>,
+    { data: BodyType<KycSubmitRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitKyc(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitKycMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitKyc>>
+>;
+export type SubmitKycMutationBody = BodyType<KycSubmitRequest>;
+export type SubmitKycMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit KYC verification
+ */
+export const useSubmitKyc = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitKyc>>,
+    TError,
+    { data: BodyType<KycSubmitRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitKyc>>,
+  TError,
+  { data: BodyType<KycSubmitRequest> },
+  TContext
+> => {
+  return useMutation(getSubmitKycMutationOptions(options));
+};
 
 /**
  * @summary Get user portfolio
@@ -993,6 +1080,81 @@ export function useGetMarketPrices<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMarketPricesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get live forex, gold and stock prices
+ */
+export const getGetForexPricesUrl = () => {
+  return `/api/market/forex`;
+};
+
+export const getForexPrices = async (
+  options?: RequestInit,
+): Promise<CoinPrice[]> => {
+  return customFetch<CoinPrice[]>(getGetForexPricesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetForexPricesQueryKey = () => {
+  return [`/api/market/forex`] as const;
+};
+
+export const getGetForexPricesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getForexPrices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getForexPrices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetForexPricesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getForexPrices>>> = ({
+    signal,
+  }) => getForexPrices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getForexPrices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetForexPricesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getForexPrices>>
+>;
+export type GetForexPricesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get live forex, gold and stock prices
+ */
+
+export function useGetForexPrices<
+  TData = Awaited<ReturnType<typeof getForexPrices>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getForexPrices>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetForexPricesQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

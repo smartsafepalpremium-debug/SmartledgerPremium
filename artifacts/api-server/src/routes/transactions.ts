@@ -1,7 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { db, usersTable, holdingsTable, transactionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { BuyCryptoBody, SellCryptoBody, DepositBody, WithdrawBody } from "@workspace/api-zod";
+import { fetchForexPrices, getForexAssetMeta } from "../lib/forex";
 
 declare module "express-session" {
   interface SessionData {
@@ -21,6 +22,19 @@ const COIN_INFO: Record<string, { name: string; price: number }> = {
   DOT: { name: "Polkadot", price: 7.2 },
   LINK: { name: "Chainlink", price: 18.5 },
 };
+
+async function resolveAssetPrice(req: Request, symbol: string): Promise<{ name: string; price: number } | null> {
+  const sym = symbol.toUpperCase();
+  if (COIN_INFO[sym]) return COIN_INFO[sym];
+
+  const meta = getForexAssetMeta(sym);
+  if (!meta) return null;
+
+  const rows = await fetchForexPrices(req);
+  const row = rows.find((r) => r.symbol === sym);
+  if (!row) return null;
+  return { name: meta.name, price: row.price };
+}
 
 const router: IRouter = Router();
 
@@ -64,9 +78,9 @@ router.post("/buy", async (req, res) => {
   }
 
   const { symbol, usdAmount } = parsed.data;
-  const coinInfo = COIN_INFO[symbol.toUpperCase()];
-  if (!coinInfo) {
-    res.status(400).json({ error: "Unknown coin" });
+  const assetInfo = await resolveAssetPrice(req, symbol);
+  if (!assetInfo) {
+    res.status(400).json({ error: "Unknown asset" });
     return;
   }
 
@@ -76,10 +90,10 @@ router.post("/buy", async (req, res) => {
     return;
   }
 
-  const price = coinInfo.price * (1 + (Math.random() - 0.5) * 0.005);
+  const price = assetInfo.price * (1 + (Math.random() - 0.5) * 0.005);
   const coinAmount = usdAmount / price;
   const sym = symbol.toUpperCase();
-  const coinName = coinInfo.name;
+  const coinName = assetInfo.name;
 
   await db.update(usersTable).set({ usdBalance: user.usdBalance - usdAmount }).where(eq(usersTable.id, user.id));
 
@@ -147,14 +161,14 @@ router.post("/sell", async (req, res) => {
   }
 
   const { symbol, usdAmount } = parsed.data;
-  const coinInfo = COIN_INFO[symbol.toUpperCase()];
-  if (!coinInfo) {
-    res.status(400).json({ error: "Unknown coin" });
+  const assetInfo = await resolveAssetPrice(req, symbol);
+  if (!assetInfo) {
+    res.status(400).json({ error: "Unknown asset" });
     return;
   }
 
   const sym = symbol.toUpperCase();
-  const price = coinInfo.price * (1 + (Math.random() - 0.5) * 0.005);
+  const price = assetInfo.price * (1 + (Math.random() - 0.5) * 0.005);
   const coinAmount = usdAmount / price;
 
   const [holding] = await db

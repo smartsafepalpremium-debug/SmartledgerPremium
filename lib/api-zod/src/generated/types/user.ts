@@ -5,6 +5,7 @@
  * CryptoX Exchange API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserKycStatus } from "./userKycStatus";
 
 export interface User {
   id: number;
@@ -12,5 +13,6 @@ export interface User {
   name: string;
   experience: string;
   usdBalance: number;
+  kycStatus: UserKycStatus;
   createdAt: string;
 }

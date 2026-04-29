@@ -137,7 +137,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 }
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/invest", icon: ArrowRightLeft, label: "Invest & Trade" },
   { href: "/dashboard/portfolio", icon: Wallet, label: "Portfolio" },
   { href: "/dashboard/deposit", icon: ArrowDownToLine, label: "Deposit" },

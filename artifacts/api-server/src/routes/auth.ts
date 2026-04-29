@@ -46,6 +46,7 @@ router.post("/register", async (req, res) => {
       name: user.name,
       experience: user.experience,
       usdBalance: user.usdBalance,
+      kycStatus: user.kycStatus,
       createdAt: user.createdAt.toISOString(),
     },
     message: "Registration successful",
@@ -82,6 +83,7 @@ router.post("/login", async (req, res) => {
       name: user.name,
       experience: user.experience,
       usdBalance: user.usdBalance,
+      kycStatus: user.kycStatus,
       createdAt: user.createdAt.toISOString(),
     },
     message: "Login successful",
@@ -111,7 +113,50 @@ router.get("/me", async (req, res) => {
     name: user.name,
     experience: user.experience,
     usdBalance: user.usdBalance,
+    kycStatus: user.kycStatus,
     createdAt: user.createdAt.toISOString(),
+  });
+});
+
+router.post("/kyc/verify", async (req, res) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { fullName, dateOfBirth, country, idNumber } = (req.body ?? {}) as {
+    fullName?: string;
+    dateOfBirth?: string;
+    country?: string;
+    idNumber?: string;
+  };
+
+  if (!fullName || !dateOfBirth || !country || !idNumber) {
+    res.status(400).json({ error: "All KYC fields are required" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ kycStatus: "verified" })
+    .where(eq(usersTable.id, req.session.userId))
+    .returning();
+
+  if (!updated) {
+    res.status(401).json({ error: "User not found" });
+    return;
+  }
+
+  req.log.info({ userId: updated.id, country }, "KYC submitted and auto-verified (demo)");
+
+  res.json({
+    id: updated.id,
+    email: updated.email,
+    name: updated.name,
+    experience: updated.experience,
+    usdBalance: updated.usdBalance,
+    kycStatus: updated.kycStatus,
+    createdAt: updated.createdAt.toISOString(),
   });
 });
 
