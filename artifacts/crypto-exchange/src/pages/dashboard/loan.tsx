@@ -427,7 +427,7 @@ export default function LoanPage() {
 
             {/* Benefits */}
             <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-              <h3 className="text-sm font-bold text-foreground">Why CryptoX Loans?</h3>
+              <h3 className="text-sm font-bold text-foreground">Why Smartledger-premium Loans?</h3>
               {[
                 { icon: ShieldCheck, text: "No credit check — collateral based" },
                 { icon: BadgeDollarSign, text: "Funds disbursed instantly upon approval" },

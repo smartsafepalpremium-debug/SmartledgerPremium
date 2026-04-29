@@ -20,7 +20,7 @@ export default function LandingPage() {
             <Zap className="w-4 h-4" /> Trusted by 10M+ Users Worldwide
           </div>
           <h1 className="text-5xl md:text-7xl font-bold font-display leading-[1.1] mb-6">
-            Buy, trade, and hold <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">crypto</span> securely.
+            Invest, trade, and hold <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">crypto</span> securely.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0">
             Smartledger-premium provides a professional, high-liquidity environment for both beginners and institutional traders. Choose your path to get started.
@@ -67,11 +67,11 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold font-display group-hover:text-primary transition-colors">I'm new to crypto</h3>
-                    <p className="text-muted-foreground">Simple tools to buy your first coin.</p>
+                    <p className="text-muted-foreground">Simple tools to invest in your first coin.</p>
                   </div>
                 </div>
                 <ul className="space-y-2 text-sm text-muted-foreground/80 mt-4">
-                  <li className="flex items-center gap-2">✓ Guided buying process</li>
+                  <li className="flex items-center gap-2">✓ Guided investing process</li>
                   <li className="flex items-center gap-2">✓ Educational resources</li>
                   <li className="flex items-center gap-2">✓ Simplified portfolio view</li>
                 </ul>
