@@ -14,7 +14,8 @@ import {
   X,
   Link2,
   Shield,
-  Landmark
+  Landmark,
+  Facebook
 } from "lucide-react";
 import { Button } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,27 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 relative z-10 flex flex-col">
         {children}
       </main>
+
+      <footer className="relative z-10 border-t border-border/60 mt-12">
+        <div className="container mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Smartledger-premium" className="w-5 h-5 object-contain opacity-80" />
+            <span>© {new Date().getFullYear()} Smartledger-premium. All rights reserved.</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">Follow us</span>
+            <a
+              href="https://www.facebook.com/share/1HxbpsHXFA/?mibextid=wwXIfr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="w-9 h-9 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
+            >
+              <Facebook className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

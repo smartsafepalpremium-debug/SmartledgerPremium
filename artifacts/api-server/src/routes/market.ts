@@ -34,7 +34,7 @@ type CoinGeckoEntry = {
 };
 
 let cache: { ts: number; data: PriceRow[] } | null = null;
-const CACHE_MS = 8000;
+const CACHE_MS = 2000;
 const ids = COINS.map((c) => c.cgId).join(",");
 const COINGECKO_URL =
   `https://api.coingecko.com/api/v3/simple/price?ids=${ids}` +

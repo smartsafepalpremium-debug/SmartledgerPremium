@@ -1,10 +1,35 @@
+import { useEffect, useRef, useState } from "react";
 import { DashboardLayout } from "@/components/layout";
 import { Card, Button } from "@/components/ui/shared";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetPortfolio, useGetMarketPrices } from "@workspace/api-client-react";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, ExternalLink } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRightLeft, Wallet, ExternalLink, Radio } from "lucide-react";
 import { Link } from "wouter";
+
+function LivePrice({ value }: { value: number }) {
+  const prev = useRef(value);
+  const [flash, setFlash] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    if (value !== prev.current) {
+      setFlash(value > prev.current ? "up" : "down");
+      prev.current = value;
+      const t = setTimeout(() => setFlash(null), 800);
+      return () => clearTimeout(t);
+    }
+  }, [value]);
+  return (
+    <span
+      className={cn(
+        "inline-block px-2 py-0.5 rounded transition-colors duration-500",
+        flash === "up" && "bg-success/20 text-success",
+        flash === "down" && "bg-destructive/20 text-destructive",
+      )}
+    >
+      {formatCurrency(value, 2, 6)}
+    </span>
+  );
+}
 
 export default function DashboardOverview() {
   const { user } = useAuth();
@@ -77,7 +102,12 @@ export default function DashboardOverview() {
         {/* Market Highlights */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-display font-bold">Trending Markets</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-display font-bold">Trending Markets</h2>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20 text-success text-[10px] font-bold uppercase tracking-wider">
+                <Radio className="w-3 h-3 animate-pulse" /> Live
+              </span>
+            </div>
             <Link href="/dashboard/invest" className="text-sm font-medium text-primary hover:underline">View All</Link>
           </div>
           
@@ -118,7 +148,7 @@ export default function DashboardOverview() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right mono-nums font-medium text-foreground">
-                          {formatCurrency(coin.price, 2, 6)}
+                          <LivePrice value={coin.price} />
                         </td>
                         <td className={cn(
                           "px-6 py-4 text-right mono-nums font-medium",
