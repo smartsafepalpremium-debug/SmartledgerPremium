@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { 
@@ -15,13 +15,15 @@ import {
   Link2,
   Shield,
   Landmark,
-  Facebook
+  Facebook,
+  BadgeCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
+  const [showCert, setShowCert] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
       {/* Decorative background elements */}
@@ -55,6 +57,24 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <span>© {new Date().getFullYear()} Smartledger-premium. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowCert(true)}
+              className="group flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-secondary border border-border hover:border-primary/50 transition-colors"
+              aria-label="View certificate of incorporation"
+            >
+              <span className="w-7 h-7 rounded-full overflow-hidden border border-border bg-white flex-shrink-0">
+                <img
+                  src={`${import.meta.env.BASE_URL}images/certificate.jpg`}
+                  alt="Certificate of Incorporation"
+                  className="w-full h-full object-cover"
+                />
+              </span>
+              <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+                Verified UK
+              </span>
+            </button>
             <span className="text-xs text-muted-foreground">Follow us</span>
             <a
               href="https://www.facebook.com/share/1HxbpsHXFA/?mibextid=wwXIfr"
@@ -68,6 +88,39 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {showCert && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setShowCert(false)}
+        >
+          <div
+            className="relative max-w-4xl w-full bg-card border border-border rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="w-5 h-5 text-primary" />
+                <span className="font-semibold text-foreground">Certificate of Incorporation</span>
+              </div>
+              <button
+                onClick={() => setShowCert(false)}
+                className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-2 bg-white">
+              <img
+                src={`${import.meta.env.BASE_URL}images/certificate.jpg`}
+                alt="Smartledger-premium Certificate of Incorporation"
+                className="w-full h-auto rounded-md"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
