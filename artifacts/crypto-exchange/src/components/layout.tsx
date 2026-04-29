@@ -70,9 +70,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   className="w-full h-full object-cover"
                 />
               </span>
-              <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                <BadgeCheck className="w-3.5 h-3.5 text-primary" />
-                Verified UK
+              <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                Certificate
               </span>
             </button>
             <span className="text-xs text-muted-foreground">Follow us</span>
