@@ -1,27 +1,15 @@
 import { Router, type IRouter, type Request } from "express";
 import { db, usersTable, holdingsTable, transactionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { BuyCryptoBody, SellCryptoBody, DepositBody, WithdrawBody } from "@workspace/api-zod";
+import { BuyCryptoBody, SellCryptoBody, DepositBody, WithdrawBody, ConvertCryptoBody } from "@workspace/api-zod";
 import { fetchForexPrices, getForexAssetMeta } from "../lib/forex";
+import { COIN_INFO } from "../lib/coins";
 
 declare module "express-session" {
   interface SessionData {
     userId: number;
   }
 }
-
-const COIN_INFO: Record<string, { name: string; price: number }> = {
-  BTC: { name: "Bitcoin", price: 67500 },
-  ETH: { name: "Ethereum", price: 3450 },
-  BNB: { name: "BNB", price: 580 },
-  SOL: { name: "Solana", price: 175 },
-  XRP: { name: "XRP", price: 0.58 },
-  ADA: { name: "Cardano", price: 0.45 },
-  DOGE: { name: "Dogecoin", price: 0.162 },
-  MATIC: { name: "Polygon", price: 0.87 },
-  DOT: { name: "Polkadot", price: 7.2 },
-  LINK: { name: "Chainlink", price: 18.5 },
-};
 
 async function resolveAssetPrice(req: Request, symbol: string): Promise<{ name: string; price: number } | null> {
   const sym = symbol.toUpperCase();
@@ -229,9 +217,77 @@ router.post("/deposit", async (req, res) => {
     return;
   }
 
-  const { amount } = parsed.data;
-
+  const { amount, symbol } = parsed.data;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
+
+  // Per-coin deposit: credit holdings instead of fiat balance
+  if (symbol) {
+    const sym = symbol.toUpperCase();
+    const assetInfo = await resolveAssetPrice(req, sym);
+    if (!assetInfo) {
+      res.status(400).json({ error: "Unknown asset" });
+      return;
+    }
+
+    const coinAmount = amount;
+    const usdValue = coinAmount * assetInfo.price;
+
+    const existing = await db
+      .select()
+      .from(holdingsTable)
+      .where(and(eq(holdingsTable.userId, user.id), eq(holdingsTable.symbol, sym)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const h = existing[0];
+      const newAmount = h.amount + coinAmount;
+      // Treat deposits as cost-basis at current price
+      const newAvg = newAmount > 0
+        ? (h.avgBuyPrice * h.amount + assetInfo.price * coinAmount) / newAmount
+        : assetInfo.price;
+      await db
+        .update(holdingsTable)
+        .set({ amount: newAmount, avgBuyPrice: newAvg, updatedAt: new Date() })
+        .where(eq(holdingsTable.id, h.id));
+    } else {
+      await db.insert(holdingsTable).values({
+        userId: user.id,
+        coin: assetInfo.name,
+        symbol: sym,
+        amount: coinAmount,
+        avgBuyPrice: assetInfo.price,
+      });
+    }
+
+    const [tx] = await db
+      .insert(transactionsTable)
+      .values({
+        userId: user.id,
+        type: "deposit",
+        coin: assetInfo.name,
+        symbol: sym,
+        amount: coinAmount,
+        usdAmount: usdValue,
+        price: assetInfo.price,
+        status: "completed",
+      })
+      .returning();
+
+    res.json({
+      id: tx.id,
+      type: tx.type,
+      coin: tx.coin,
+      symbol: tx.symbol,
+      amount: tx.amount,
+      usdAmount: tx.usdAmount,
+      price: tx.price,
+      status: tx.status,
+      createdAt: tx.createdAt.toISOString(),
+    });
+    return;
+  }
+
+  // Fiat deposit (back-compat): amount is USD
   await db.update(usersTable).set({ usdBalance: user.usdBalance + amount }).where(eq(usersTable.id, user.id));
 
   const [tx] = await db
@@ -255,6 +311,107 @@ router.post("/deposit", async (req, res) => {
     status: tx.status,
     createdAt: tx.createdAt.toISOString(),
   });
+});
+
+router.post("/convert", async (req, res) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const parsed = ConvertCryptoBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
+
+  const { fromSymbol, toSymbol, fromAmount } = parsed.data;
+  const fromSym = fromSymbol.toUpperCase();
+  const toSym = toSymbol.toUpperCase();
+
+  if (fromSym === toSym) {
+    res.status(400).json({ error: "Cannot convert to the same coin" });
+    return;
+  }
+  if (fromAmount <= 0) {
+    res.status(400).json({ error: "Amount must be positive" });
+    return;
+  }
+
+  const fromInfo = await resolveAssetPrice(req, fromSym);
+  const toInfo = await resolveAssetPrice(req, toSym);
+  if (!fromInfo || !toInfo) {
+    res.status(400).json({ error: "Unknown asset" });
+    return;
+  }
+
+  const [fromHolding] = await db
+    .select()
+    .from(holdingsTable)
+    .where(and(eq(holdingsTable.userId, req.session.userId), eq(holdingsTable.symbol, fromSym)))
+    .limit(1);
+
+  if (!fromHolding || fromHolding.amount < fromAmount) {
+    res.status(400).json({ error: `Insufficient ${fromSym} balance` });
+    return;
+  }
+
+  // Apply tiny conversion spread (0.1%) like Binance Convert
+  const fromPrice = fromInfo.price;
+  const toPrice = toInfo.price;
+  const usdValue = fromAmount * fromPrice;
+  const toAmount = (usdValue * 0.999) / toPrice;
+  const rate = toAmount / fromAmount;
+
+  // Deduct from-coin
+  const newFromAmt = fromHolding.amount - fromAmount;
+  if (newFromAmt <= 0.0000001) {
+    await db.delete(holdingsTable).where(eq(holdingsTable.id, fromHolding.id));
+  } else {
+    await db
+      .update(holdingsTable)
+      .set({ amount: newFromAmt, updatedAt: new Date() })
+      .where(eq(holdingsTable.id, fromHolding.id));
+  }
+
+  // Credit to-coin
+  const [toHolding] = await db
+    .select()
+    .from(holdingsTable)
+    .where(and(eq(holdingsTable.userId, req.session.userId), eq(holdingsTable.symbol, toSym)))
+    .limit(1);
+
+  if (toHolding) {
+    const newAmount = toHolding.amount + toAmount;
+    const newAvg = (toHolding.avgBuyPrice * toHolding.amount + toPrice * toAmount) / newAmount;
+    await db
+      .update(holdingsTable)
+      .set({ amount: newAmount, avgBuyPrice: newAvg, updatedAt: new Date() })
+      .where(eq(holdingsTable.id, toHolding.id));
+  } else {
+    await db.insert(holdingsTable).values({
+      userId: req.session.userId,
+      coin: toInfo.name,
+      symbol: toSym,
+      amount: toAmount,
+      avgBuyPrice: toPrice,
+    });
+  }
+
+  await db.insert(transactionsTable).values({
+    userId: req.session.userId,
+    type: "convert",
+    coin: `${fromSym} → ${toSym}`,
+    symbol: toSym,
+    amount: toAmount,
+    usdAmount: usdValue,
+    price: toPrice,
+    status: "completed",
+  });
+
+  req.log.info({ fromSym, toSym, fromAmount, toAmount, usdValue }, "convert.completed");
+
+  res.json({ fromSymbol: fromSym, toSymbol: toSym, fromAmount, toAmount, rate, usdValue });
 });
 
 router.post("/withdraw", async (req, res) => {

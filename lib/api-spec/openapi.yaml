@@ -225,6 +225,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Transaction"
 
+  /transactions/convert:
+    post:
+      operationId: convertCrypto
+      tags: [transactions]
+      summary: Convert one cryptocurrency to another
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConvertRequest"
+      responses:
+        "200":
+          description: Conversion successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvertResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /transactions/withdraw:
     post:
       operationId: withdraw
@@ -436,7 +461,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [buy, sell, deposit, withdraw]
+          enum: [buy, sell, deposit, withdraw, convert]
         coin:
           type: string
           nullable: true
@@ -479,11 +504,55 @@ components:
       properties:
         amount:
           type: number
+          description: When symbol is provided, this is the coin amount (e.g. 0.5 BTC). Otherwise it is the USD amount credited to fiat balance.
         method:
+          type: string
+        symbol:
+          type: string
+          description: Coin symbol to credit (e.g. BTC, USDT). If omitted, deposit credits the USD fiat balance.
+        address:
           type: string
       required:
         - amount
         - method
+
+    ConvertRequest:
+      type: object
+      properties:
+        fromSymbol:
+          type: string
+        toSymbol:
+          type: string
+        fromAmount:
+          type: number
+          description: Amount of fromSymbol coin to convert.
+      required:
+        - fromSymbol
+        - toSymbol
+        - fromAmount
+
+    ConvertResponse:
+      type: object
+      properties:
+        fromSymbol:
+          type: string
+        toSymbol:
+          type: string
+        fromAmount:
+          type: number
+        toAmount:
+          type: number
+        rate:
+          type: number
+        usdValue:
+          type: number
+      required:
+        - fromSymbol
+        - toSymbol
+        - fromAmount
+        - toAmount
+        - rate
+        - usdValue
 
     WithdrawRequest:
       type: object

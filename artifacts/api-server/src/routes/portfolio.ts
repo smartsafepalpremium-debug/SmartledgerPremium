@@ -1,25 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, holdingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { COIN_INFO as CURRENT_PRICES } from "../lib/coins";
 
 declare module "express-session" {
   interface SessionData {
     userId: number;
   }
 }
-
-const CURRENT_PRICES: Record<string, { name: string; price: number }> = {
-  BTC: { name: "Bitcoin", price: 67500 },
-  ETH: { name: "Ethereum", price: 3450 },
-  BNB: { name: "BNB", price: 580 },
-  SOL: { name: "Solana", price: 175 },
-  XRP: { name: "XRP", price: 0.58 },
-  ADA: { name: "Cardano", price: 0.45 },
-  DOGE: { name: "Dogecoin", price: 0.162 },
-  MATIC: { name: "Polygon", price: 0.87 },
-  DOT: { name: "Polkadot", price: 7.2 },
-  LINK: { name: "Chainlink", price: 18.5 },
-};
 
 const router: IRouter = Router();
 

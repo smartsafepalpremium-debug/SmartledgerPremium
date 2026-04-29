@@ -13,6 +13,7 @@ import TransactionsPage from "@/pages/dashboard/transactions";
 import SettingsPage from "@/pages/dashboard/settings";
 import WalletConnectPage from "@/pages/dashboard/wallet-connect";
 import LoanPage from "@/pages/dashboard/loan";
+import ConvertPage from "@/pages/dashboard/convert";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/dashboard/portfolio"><ProtectedRoute component={PortfolioPage} /></Route>
       <Route path="/dashboard/deposit"><ProtectedRoute component={DepositPage} /></Route>
       <Route path="/dashboard/withdraw"><ProtectedRoute component={WithdrawPage} /></Route>
+      <Route path="/dashboard/convert"><ProtectedRoute component={ConvertPage} /></Route>
       <Route path="/dashboard/transactions"><ProtectedRoute component={TransactionsPage} /></Route>
       <Route path="/dashboard/settings"><ProtectedRoute component={SettingsPage} /></Route>
       <Route path="/dashboard/wallet-connect"><ProtectedRoute component={WalletConnectPage} /></Route>

@@ -8,6 +8,8 @@
 
 export * from "./authResponse";
 export * from "./coinPrice";
+export * from "./convertRequest";
+export * from "./convertResponse";
 export * from "./depositRequest";
 export * from "./errorResponse";
 export * from "./healthStatus";

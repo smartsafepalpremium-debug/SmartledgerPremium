@@ -7,6 +7,10 @@
  */
 
 export interface DepositRequest {
+  /** When symbol is provided, this is the coin amount (e.g. 0.5 BTC). Otherwise it is the USD amount credited to fiat balance. */
   amount: number;
   method: string;
+  /** Coin symbol to credit (e.g. BTC, USDT). If omitted, deposit credits the USD fiat balance. */
+  symbol?: string;
+  address?: string;
 }

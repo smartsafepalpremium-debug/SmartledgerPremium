@@ -252,7 +252,7 @@ export default function DepositPage() {
     setSubmittedTime(selected.time);
     setSubmittedTxId(txId);
     setSubmittedAt(timestamp);
-    mutate({ data: { amount: num, method: selected.id, address: selected.address } });
+    mutate({ data: { amount: num, method: selected.id, address: selected.address, symbol: selected.symbol } });
   };
 
   if (success) {

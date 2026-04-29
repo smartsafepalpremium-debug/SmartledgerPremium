@@ -59,7 +59,7 @@ export default function DashboardOverview() {
                 <ArrowUpFromLine className="w-4 h-4" /> Withdraw
               </Button>
             </Link>
-            <Link href="/dashboard/invest?tab=trade">
+            <Link href="/dashboard/convert">
               <Button variant="secondary" className="font-semibold gap-1.5">
                 <Repeat className="w-4 h-4" /> Convert
               </Button>

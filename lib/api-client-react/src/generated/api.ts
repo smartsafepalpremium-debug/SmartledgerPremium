@@ -19,6 +19,8 @@ import type {
 import type {
   AuthResponse,
   CoinPrice,
+  ConvertRequest,
+  ConvertResponse,
   DepositRequest,
   ErrorResponse,
   HealthStatus,
@@ -925,6 +927,92 @@ export const useDeposit = <
   TContext
 > => {
   return useMutation(getDepositMutationOptions(options));
+};
+
+/**
+ * @summary Convert one cryptocurrency to another
+ */
+export const getConvertCryptoUrl = () => {
+  return `/api/transactions/convert`;
+};
+
+export const convertCrypto = async (
+  convertRequest: ConvertRequest,
+  options?: RequestInit,
+): Promise<ConvertResponse> => {
+  return customFetch<ConvertResponse>(getConvertCryptoUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(convertRequest),
+  });
+};
+
+export const getConvertCryptoMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertCrypto>>,
+    TError,
+    { data: BodyType<ConvertRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof convertCrypto>>,
+  TError,
+  { data: BodyType<ConvertRequest> },
+  TContext
+> => {
+  const mutationKey = ["convertCrypto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof convertCrypto>>,
+    { data: BodyType<ConvertRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return convertCrypto(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConvertCryptoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof convertCrypto>>
+>;
+export type ConvertCryptoMutationBody = BodyType<ConvertRequest>;
+export type ConvertCryptoMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Convert one cryptocurrency to another
+ */
+export const useConvertCrypto = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof convertCrypto>>,
+    TError,
+    { data: BodyType<ConvertRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof convertCrypto>>,
+  TError,
+  { data: BodyType<ConvertRequest> },
+  TContext
+> => {
+  return useMutation(getConvertCryptoMutationOptions(options));
 };
 
 /**

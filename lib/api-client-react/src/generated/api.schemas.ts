@@ -92,6 +92,7 @@ export const TransactionType = {
   sell: "sell",
   deposit: "deposit",
   withdraw: "withdraw",
+  convert: "convert",
 } as const;
 
 export type TransactionStatus =
@@ -121,8 +122,28 @@ export interface TradeRequest {
 }
 
 export interface DepositRequest {
+  /** When symbol is provided, this is the coin amount (e.g. 0.5 BTC). Otherwise it is the USD amount credited to fiat balance. */
   amount: number;
   method: string;
+  /** Coin symbol to credit (e.g. BTC, USDT). If omitted, deposit credits the USD fiat balance. */
+  symbol?: string;
+  address?: string;
+}
+
+export interface ConvertRequest {
+  fromSymbol: string;
+  toSymbol: string;
+  /** Amount of fromSymbol coin to convert. */
+  fromAmount: number;
+}
+
+export interface ConvertResponse {
+  fromSymbol: string;
+  toSymbol: string;
+  fromAmount: number;
+  toAmount: number;
+  rate: number;
+  usdValue: number;
 }
 
 export interface WithdrawRequest {

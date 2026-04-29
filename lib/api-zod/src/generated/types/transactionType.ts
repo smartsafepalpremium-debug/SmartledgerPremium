@@ -14,4 +14,5 @@ export const TransactionType = {
   sell: "sell",
   deposit: "deposit",
   withdraw: "withdraw",
+  convert: "convert",
 } as const;

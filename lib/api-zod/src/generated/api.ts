@@ -110,7 +110,7 @@ export const GetPortfolioResponse = zod.object({
  */
 export const GetTransactionsResponseItem = zod.object({
   id: zod.number(),
-  type: zod.enum(["buy", "sell", "deposit", "withdraw"]),
+  type: zod.enum(["buy", "sell", "deposit", "withdraw", "convert"]),
   coin: zod.string().nullish(),
   symbol: zod.string().nullish(),
   amount: zod.number().nullish(),
@@ -131,7 +131,7 @@ export const BuyCryptoBody = zod.object({
 
 export const BuyCryptoResponse = zod.object({
   id: zod.number(),
-  type: zod.enum(["buy", "sell", "deposit", "withdraw"]),
+  type: zod.enum(["buy", "sell", "deposit", "withdraw", "convert"]),
   coin: zod.string().nullish(),
   symbol: zod.string().nullish(),
   amount: zod.number().nullish(),
@@ -151,7 +151,7 @@ export const SellCryptoBody = zod.object({
 
 export const SellCryptoResponse = zod.object({
   id: zod.number(),
-  type: zod.enum(["buy", "sell", "deposit", "withdraw"]),
+  type: zod.enum(["buy", "sell", "deposit", "withdraw", "convert"]),
   coin: zod.string().nullish(),
   symbol: zod.string().nullish(),
   amount: zod.number().nullish(),
@@ -165,13 +165,24 @@ export const SellCryptoResponse = zod.object({
  * @summary Deposit funds
  */
 export const DepositBody = zod.object({
-  amount: zod.number(),
+  amount: zod
+    .number()
+    .describe(
+      "When symbol is provided, this is the coin amount (e.g. 0.5 BTC). Otherwise it is the USD amount credited to fiat balance.",
+    ),
   method: zod.string(),
+  symbol: zod
+    .string()
+    .optional()
+    .describe(
+      "Coin symbol to credit (e.g. BTC, USDT). If omitted, deposit credits the USD fiat balance.",
+    ),
+  address: zod.string().optional(),
 });
 
 export const DepositResponse = zod.object({
   id: zod.number(),
-  type: zod.enum(["buy", "sell", "deposit", "withdraw"]),
+  type: zod.enum(["buy", "sell", "deposit", "withdraw", "convert"]),
   coin: zod.string().nullish(),
   symbol: zod.string().nullish(),
   amount: zod.number().nullish(),
@@ -179,6 +190,24 @@ export const DepositResponse = zod.object({
   price: zod.number().nullish(),
   status: zod.enum(["completed", "pending", "failed"]),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary Convert one cryptocurrency to another
+ */
+export const ConvertCryptoBody = zod.object({
+  fromSymbol: zod.string(),
+  toSymbol: zod.string(),
+  fromAmount: zod.number().describe("Amount of fromSymbol coin to convert."),
+});
+
+export const ConvertCryptoResponse = zod.object({
+  fromSymbol: zod.string(),
+  toSymbol: zod.string(),
+  fromAmount: zod.number(),
+  toAmount: zod.number(),
+  rate: zod.number(),
+  usdValue: zod.number(),
 });
 
 /**
@@ -192,7 +221,7 @@ export const WithdrawBody = zod.object({
 
 export const WithdrawResponse = zod.object({
   id: zod.number(),
-  type: zod.enum(["buy", "sell", "deposit", "withdraw"]),
+  type: zod.enum(["buy", "sell", "deposit", "withdraw", "convert"]),
   coin: zod.string().nullish(),
   symbol: zod.string().nullish(),
   amount: zod.number().nullish(),

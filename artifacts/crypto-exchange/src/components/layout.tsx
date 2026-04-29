@@ -17,6 +17,7 @@ import {
   Landmark,
   Facebook,
   BadgeCheck,
+  Repeat,
   Info,
   ShieldCheck,
   Globe2,
@@ -412,6 +413,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/portfolio", icon: Wallet, label: "Portfolio" },
   { href: "/dashboard/deposit", icon: ArrowDownToLine, label: "Deposit" },
   { href: "/dashboard/withdraw", icon: ArrowUpFromLine, label: "Withdraw" },
+  { href: "/dashboard/convert", icon: Repeat, label: "Convert" },
   { href: "/dashboard/loan", icon: Landmark, label: "Loans" },
   { href: "/dashboard/transactions", icon: History, label: "Transactions" },
 ];
