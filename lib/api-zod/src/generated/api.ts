@@ -39,7 +39,9 @@ export const LoginResponse = zod.object({
     name: zod.string(),
     experience: zod.string(),
     usdBalance: zod.number(),
-    kycStatus: zod.enum(["unverified", "pending", "verified"]),
+    kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+    role: zod.enum(["user", "admin"]),
+    status: zod.enum(["active", "suspended"]),
     createdAt: zod.string(),
   }),
   message: zod.string(),
@@ -61,7 +63,9 @@ export const GetMeResponse = zod.object({
   name: zod.string(),
   experience: zod.string(),
   usdBalance: zod.number(),
-  kycStatus: zod.enum(["unverified", "pending", "verified"]),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
   createdAt: zod.string(),
 });
 
@@ -81,7 +85,9 @@ export const SubmitKycResponse = zod.object({
   name: zod.string(),
   experience: zod.string(),
   usdBalance: zod.number(),
-  kycStatus: zod.enum(["unverified", "pending", "verified"]),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
   createdAt: zod.string(),
 });
 
@@ -189,6 +195,154 @@ export const DepositResponse = zod.object({
   usdAmount: zod.number(),
   price: zod.number().nullish(),
   status: zod.enum(["completed", "pending", "failed"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Get admin dashboard stats (admin only)
+ */
+export const GetAdminStatsResponse = zod.object({
+  totalUsers: zod.number(),
+  totalAdmins: zod.number(),
+  verifiedUsers: zod.number(),
+  suspendedUsers: zod.number(),
+  totalUsdBalance: zod.number(),
+  totalCryptoValue: zod.number(),
+  pendingDeposits: zod.number(),
+  pendingWithdrawals: zod.number(),
+  completedTransactions: zod.number(),
+  totalVolumeUsd: zod.number(),
+});
+
+/**
+ * @summary List all users (admin only)
+ */
+export const GetAdminUsersQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+});
+
+export const GetAdminUsersResponseItem = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
+  createdAt: zod.string(),
+});
+export const GetAdminUsersResponse = zod.array(GetAdminUsersResponseItem);
+
+/**
+ * @summary Update a user (admin only)
+ */
+export const UpdateAdminUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateAdminUserBody = zod.object({
+  usdBalance: zod.number().optional(),
+  kycStatus: zod
+    .enum(["unverified", "pending", "verified", "rejected"])
+    .optional(),
+  role: zod.enum(["user", "admin"]).optional(),
+  status: zod.enum(["active", "suspended"]).optional(),
+  adjustBalance: zod.number().optional(),
+  adjustReason: zod.string().optional(),
+});
+
+export const UpdateAdminUserResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a user (admin only)
+ */
+export const DeleteAdminUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteAdminUserResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List all transactions (admin only)
+ */
+export const GetAdminTransactionsQueryParams = zod.object({
+  status: zod.coerce.string().optional(),
+  type: zod.coerce.string().optional(),
+  userId: zod.coerce.number().optional(),
+});
+
+export const GetAdminTransactionsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userEmail: zod.string(),
+  userName: zod.string(),
+  type: zod.string(),
+  coin: zod.string().nullish(),
+  symbol: zod.string().nullish(),
+  amount: zod.number().nullish(),
+  usdAmount: zod.number(),
+  price: zod.number().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const GetAdminTransactionsResponse = zod.array(
+  GetAdminTransactionsResponseItem,
+);
+
+/**
+ * @summary Approve a pending transaction (admin only)
+ */
+export const ApproveAdminTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ApproveAdminTransactionResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userEmail: zod.string(),
+  userName: zod.string(),
+  type: zod.string(),
+  coin: zod.string().nullish(),
+  symbol: zod.string().nullish(),
+  amount: zod.number().nullish(),
+  usdAmount: zod.number(),
+  price: zod.number().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Reject a pending transaction (admin only)
+ */
+export const RejectAdminTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RejectAdminTransactionResponse = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  userEmail: zod.string(),
+  userName: zod.string(),
+  type: zod.string(),
+  coin: zod.string().nullish(),
+  symbol: zod.string().nullish(),
+  amount: zod.number().nullish(),
+  usdAmount: zod.number(),
+  price: zod.number().nullish(),
+  status: zod.string(),
   createdAt: zod.string(),
 });
 

@@ -423,6 +423,8 @@ const SECURITY_ITEMS = [
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
+const ADMIN_ITEM = { href: "/admin", icon: ShieldCheck, label: "Admin Panel" };
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
@@ -513,6 +515,28 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   </Link>
                 );
               })}
+
+              {user.role === "admin" && (
+                <>
+                  <div className="mt-8 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 px-2 flex items-center gap-2">
+                    <ShieldCheck className="w-3 h-3" /> Admin
+                  </div>
+                  <Link href={ADMIN_ITEM.href}>
+                    <span className={cn(
+                      "flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all group cursor-pointer border",
+                      location.startsWith("/admin")
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-200"
+                        : "border-amber-500/20 text-amber-300/90 hover:bg-amber-500/10 hover:text-amber-200"
+                    )}>
+                      <ADMIN_ITEM.icon className="w-5 h-5 text-amber-400" />
+                      <span className="flex-1">{ADMIN_ITEM.label}</span>
+                      <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+                        ADMIN
+                      </span>
+                    </span>
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="p-4 border-t border-border mt-auto">

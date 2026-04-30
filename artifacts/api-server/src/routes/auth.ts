@@ -47,6 +47,8 @@ router.post("/register", async (req, res) => {
       experience: user.experience,
       usdBalance: user.usdBalance,
       kycStatus: user.kycStatus,
+      role: user.role,
+      status: user.status,
       createdAt: user.createdAt.toISOString(),
     },
     message: "Registration successful",
@@ -74,6 +76,11 @@ router.post("/login", async (req, res) => {
     return;
   }
 
+  if (user.status === "suspended") {
+    res.status(403).json({ error: "Account suspended. Contact support." });
+    return;
+  }
+
   req.session.userId = user.id;
 
   res.json({
@@ -84,6 +91,8 @@ router.post("/login", async (req, res) => {
       experience: user.experience,
       usdBalance: user.usdBalance,
       kycStatus: user.kycStatus,
+      role: user.role,
+      status: user.status,
       createdAt: user.createdAt.toISOString(),
     },
     message: "Login successful",
@@ -114,6 +123,8 @@ router.get("/me", async (req, res) => {
     experience: user.experience,
     usdBalance: user.usdBalance,
     kycStatus: user.kycStatus,
+    role: user.role,
+    status: user.status,
     createdAt: user.createdAt.toISOString(),
   });
 });
@@ -138,7 +149,7 @@ router.post("/kyc/verify", async (req, res) => {
 
   const [updated] = await db
     .update(usersTable)
-    .set({ kycStatus: "verified" })
+    .set({ kycStatus: "pending" })
     .where(eq(usersTable.id, req.session.userId))
     .returning();
 
@@ -147,7 +158,7 @@ router.post("/kyc/verify", async (req, res) => {
     return;
   }
 
-  req.log.info({ userId: updated.id, country }, "KYC submitted and auto-verified (demo)");
+  req.log.info({ userId: updated.id, country }, "KYC submitted, awaiting admin approval");
 
   res.json({
     id: updated.id,
@@ -156,6 +167,8 @@ router.post("/kyc/verify", async (req, res) => {
     experience: updated.experience,
     usdBalance: updated.usdBalance,
     kycStatus: updated.kycStatus,
+    role: updated.role,
+    status: updated.status,
     createdAt: updated.createdAt.toISOString(),
   });
 });

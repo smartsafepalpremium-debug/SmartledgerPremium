@@ -10,6 +10,8 @@ export const usersTable = pgTable("users", {
   experience: text("experience").notNull().default("beginner"),
   usdBalance: real("usd_balance").notNull().default(0),
   kycStatus: text("kyc_status").notNull().default("unverified"),
+  role: text("role").notNull().default("user"),
+  status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

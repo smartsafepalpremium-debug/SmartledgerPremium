@@ -6,12 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminStats";
+export * from "./adminTransaction";
+export * from "./adminUserUpdate";
+export * from "./adminUserUpdateKycStatus";
+export * from "./adminUserUpdateRole";
+export * from "./adminUserUpdateStatus";
 export * from "./authResponse";
 export * from "./coinPrice";
 export * from "./convertRequest";
 export * from "./convertResponse";
 export * from "./depositRequest";
 export * from "./errorResponse";
+export * from "./getAdminTransactionsParams";
+export * from "./getAdminUsersParams";
 export * from "./healthStatus";
 export * from "./holding";
 export * from "./kycSubmitRequest";
@@ -26,4 +34,6 @@ export * from "./transactionStatus";
 export * from "./transactionType";
 export * from "./user";
 export * from "./userKycStatus";
+export * from "./userRole";
+export * from "./userStatus";
 export * from "./withdrawRequest";

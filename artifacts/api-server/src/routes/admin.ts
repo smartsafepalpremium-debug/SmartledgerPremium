@@ -1,0 +1,263 @@
+import { Router, type IRouter } from "express";
+import { db, usersTable, holdingsTable, transactionsTable } from "@workspace/db";
+import { eq, and, desc, sql } from "drizzle-orm";
+import { requireAdmin } from "../lib/admin";
+import { COIN_INFO } from "../lib/coins";
+
+const router: IRouter = Router();
+
+router.use(requireAdmin);
+
+router.get("/stats", async (_req, res) => {
+  const allUsers = await db.select().from(usersTable);
+  const allHoldings = await db.select().from(holdingsTable);
+  const allTxs = await db.select().from(transactionsTable);
+
+  const totalCryptoValue = allHoldings.reduce((sum, h) => {
+    const price = COIN_INFO[h.symbol]?.price ?? h.avgBuyPrice;
+    return sum + h.amount * price;
+  }, 0);
+
+  const stats = {
+    totalUsers: allUsers.length,
+    totalAdmins: allUsers.filter((u) => u.role === "admin").length,
+    verifiedUsers: allUsers.filter((u) => u.kycStatus === "verified").length,
+    suspendedUsers: allUsers.filter((u) => u.status === "suspended").length,
+    totalUsdBalance: allUsers.reduce((s, u) => s + u.usdBalance, 0),
+    totalCryptoValue,
+    pendingDeposits: allTxs.filter((t) => t.type === "deposit" && t.status === "pending").length,
+    pendingWithdrawals: allTxs.filter((t) => t.type === "withdraw" && t.status === "pending").length,
+    completedTransactions: allTxs.filter((t) => t.status === "completed").length,
+    totalVolumeUsd: allTxs.filter((t) => t.status === "completed").reduce((s, t) => s + t.usdAmount, 0),
+  };
+  res.json(stats);
+});
+
+function userToResponse(u: typeof usersTable.$inferSelect) {
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    experience: u.experience,
+    usdBalance: u.usdBalance,
+    kycStatus: u.kycStatus,
+    role: u.role,
+    status: u.status,
+    createdAt: u.createdAt.toISOString(),
+  };
+}
+
+router.get("/users", async (req, res) => {
+  const search = String(req.query.search || "").toLowerCase().trim();
+  const all = await db.select().from(usersTable).orderBy(desc(usersTable.createdAt));
+  const filtered = search
+    ? all.filter(
+        (u) =>
+          u.email.toLowerCase().includes(search) ||
+          u.name.toLowerCase().includes(search) ||
+          String(u.id) === search
+      )
+    : all;
+  res.json(filtered.map(userToResponse));
+});
+
+router.patch("/users/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+  if (!target) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const body = req.body as {
+    usdBalance?: number;
+    kycStatus?: string;
+    role?: string;
+    status?: string;
+    adjustBalance?: number;
+    adjustReason?: string;
+  };
+
+  const updates: Partial<typeof usersTable.$inferInsert> = {};
+  if (typeof body.usdBalance === "number" && Number.isFinite(body.usdBalance)) updates.usdBalance = body.usdBalance;
+  if (body.kycStatus && ["unverified", "pending", "verified", "rejected"].includes(body.kycStatus)) updates.kycStatus = body.kycStatus;
+  if (body.role && ["user", "admin"].includes(body.role)) updates.role = body.role;
+  if (body.status && ["active", "suspended"].includes(body.status)) updates.status = body.status;
+
+  if (typeof body.adjustBalance === "number" && Number.isFinite(body.adjustBalance) && body.adjustBalance !== 0) {
+    const newBalance = (updates.usdBalance ?? target.usdBalance) + body.adjustBalance;
+    updates.usdBalance = Math.max(0, newBalance);
+    await db.insert(transactionsTable).values({
+      userId: target.id,
+      type: body.adjustBalance > 0 ? "deposit" : "withdraw",
+      coin: "Admin Adjustment",
+      symbol: null,
+      usdAmount: Math.abs(body.adjustBalance),
+      status: "completed",
+    });
+  }
+
+  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
+  req.log.info({ id, updates: Object.keys(updates) }, "admin.user.updated");
+  res.json(userToResponse(updated));
+});
+
+router.delete("/users/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const adminUser = (req as any).adminUser as typeof usersTable.$inferSelect;
+  if (id === adminUser.id) {
+    res.status(400).json({ error: "Cannot delete yourself" });
+    return;
+  }
+  await db.delete(holdingsTable).where(eq(holdingsTable.userId, id));
+  await db.delete(transactionsTable).where(eq(transactionsTable.userId, id));
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+  req.log.info({ id }, "admin.user.deleted");
+  res.json({ message: "User deleted" });
+});
+
+router.get("/transactions", async (req, res) => {
+  const status = req.query.status ? String(req.query.status) : undefined;
+  const type = req.query.type ? String(req.query.type) : undefined;
+  const userIdFilter = req.query.userId ? Number(req.query.userId) : undefined;
+
+  const rows = await db
+    .select({
+      id: transactionsTable.id,
+      userId: transactionsTable.userId,
+      userEmail: usersTable.email,
+      userName: usersTable.name,
+      type: transactionsTable.type,
+      coin: transactionsTable.coin,
+      symbol: transactionsTable.symbol,
+      amount: transactionsTable.amount,
+      usdAmount: transactionsTable.usdAmount,
+      price: transactionsTable.price,
+      status: transactionsTable.status,
+      createdAt: transactionsTable.createdAt,
+    })
+    .from(transactionsTable)
+    .leftJoin(usersTable, eq(transactionsTable.userId, usersTable.id))
+    .orderBy(desc(transactionsTable.createdAt))
+    .limit(500);
+
+  const filtered = rows.filter((r) => {
+    if (status && r.status !== status) return false;
+    if (type && r.type !== type) return false;
+    if (userIdFilter && r.userId !== userIdFilter) return false;
+    return true;
+  });
+
+  res.json(
+    filtered.map((r) => ({
+      ...r,
+      userEmail: r.userEmail ?? "(deleted)",
+      userName: r.userName ?? "(deleted)",
+      createdAt: r.createdAt.toISOString(),
+    }))
+  );
+});
+
+async function fetchTxWithUser(id: number) {
+  const [row] = await db
+    .select({
+      id: transactionsTable.id,
+      userId: transactionsTable.userId,
+      userEmail: usersTable.email,
+      userName: usersTable.name,
+      type: transactionsTable.type,
+      coin: transactionsTable.coin,
+      symbol: transactionsTable.symbol,
+      amount: transactionsTable.amount,
+      usdAmount: transactionsTable.usdAmount,
+      price: transactionsTable.price,
+      status: transactionsTable.status,
+      createdAt: transactionsTable.createdAt,
+    })
+    .from(transactionsTable)
+    .leftJoin(usersTable, eq(transactionsTable.userId, usersTable.id))
+    .where(eq(transactionsTable.id, id))
+    .limit(1);
+  return row;
+}
+
+router.post("/transactions/:id/approve", async (req, res) => {
+  const id = Number(req.params.id);
+  const [tx] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id)).limit(1);
+  if (!tx) {
+    res.status(404).json({ error: "Transaction not found" });
+    return;
+  }
+  if (tx.status !== "pending") {
+    res.status(400).json({ error: `Transaction is ${tx.status}, not pending` });
+    return;
+  }
+
+  if (tx.type === "deposit") {
+    if (tx.symbol && tx.amount && tx.amount > 0) {
+      const sym = tx.symbol;
+      const price = tx.price ?? COIN_INFO[sym]?.price ?? 0;
+      const coinName = tx.coin ?? COIN_INFO[sym]?.name ?? sym;
+      const [existing] = await db
+        .select()
+        .from(holdingsTable)
+        .where(and(eq(holdingsTable.userId, tx.userId), eq(holdingsTable.symbol, sym)))
+        .limit(1);
+      if (existing) {
+        const newAmount = existing.amount + tx.amount;
+        const newAvg = newAmount > 0 ? (existing.avgBuyPrice * existing.amount + price * tx.amount) / newAmount : price;
+        await db.update(holdingsTable).set({ amount: newAmount, avgBuyPrice: newAvg, updatedAt: new Date() }).where(eq(holdingsTable.id, existing.id));
+      } else {
+        await db.insert(holdingsTable).values({
+          userId: tx.userId,
+          coin: coinName,
+          symbol: sym,
+          amount: tx.amount,
+          avgBuyPrice: price,
+        });
+      }
+    } else {
+      // Fiat deposit
+      await db.update(usersTable).set({ usdBalance: sql`${usersTable.usdBalance} + ${tx.usdAmount}` }).where(eq(usersTable.id, tx.userId));
+    }
+  } else if (tx.type === "withdraw") {
+    // Balance was already deducted at request time. Approval just finalizes.
+  }
+
+  await db.update(transactionsTable).set({ status: "completed" }).where(eq(transactionsTable.id, id));
+  req.log.info({ id, type: tx.type }, "admin.tx.approved");
+  res.json(await fetchTxWithUser(id));
+});
+
+router.post("/transactions/:id/reject", async (req, res) => {
+  const id = Number(req.params.id);
+  const [tx] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, id)).limit(1);
+  if (!tx) {
+    res.status(404).json({ error: "Transaction not found" });
+    return;
+  }
+  if (tx.status !== "pending") {
+    res.status(400).json({ error: `Transaction is ${tx.status}, not pending` });
+    return;
+  }
+
+  if (tx.type === "withdraw") {
+    // Refund the user's balance since it was deducted at request time
+    await db.update(usersTable).set({ usdBalance: sql`${usersTable.usdBalance} + ${tx.usdAmount}` }).where(eq(usersTable.id, tx.userId));
+  }
+  // Deposits: nothing to refund (we never credited)
+
+  await db.update(transactionsTable).set({ status: "rejected" }).where(eq(transactionsTable.id, id));
+  req.log.info({ id, type: tx.type }, "admin.tx.rejected");
+  res.json(await fetchTxWithUser(id));
+});
+
+export default router;

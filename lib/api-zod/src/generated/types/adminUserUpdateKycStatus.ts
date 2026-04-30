@@ -6,9 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UserKycStatus = (typeof UserKycStatus)[keyof typeof UserKycStatus];
+export type AdminUserUpdateKycStatus =
+  (typeof AdminUserUpdateKycStatus)[keyof typeof AdminUserUpdateKycStatus];
 
-export const UserKycStatus = {
+export const AdminUserUpdateKycStatus = {
   unverified: "unverified",
   pending: "pending",
   verified: "verified",

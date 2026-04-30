@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UserKycStatus } from "./userKycStatus";
+import type { UserRole } from "./userRole";
+import type { UserStatus } from "./userStatus";
 
 export interface User {
   id: number;
@@ -14,5 +16,7 @@ export interface User {
   experience: string;
   usdBalance: number;
   kycStatus: UserKycStatus;
+  role: UserRole;
+  status: UserStatus;
   createdAt: string;
 }

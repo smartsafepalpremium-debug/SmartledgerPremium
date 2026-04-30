@@ -94,3 +94,18 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+## Crypto Exchange Admin Panel (April 2026)
+
+The `crypto-exchange` artifact has a dedicated admin panel at `/admin` that controls and approves all backend functions.
+
+- **Schema additions**: `users.role` (`user|admin`) and `users.status` (`active|suspended`).
+- **Bootstrap**: On API server startup, if no admin exists yet, the oldest user (lowest id) is auto-promoted to admin. Optional override via `ADMIN_EMAIL` env var.
+- **Approval flow**:
+  - **Deposits** (per-coin and fiat) are created with `status: pending` and credit holdings/balance only on admin approval.
+  - **Withdrawals** deduct balance immediately and are `pending`. Admin approval finalises; rejection refunds the user's USD balance.
+  - **KYC** (`/auth/kyc/verify`) sets status to `pending`; admin must mark `verified` from the panel.
+  - **Buy/sell/convert** stay instant (simulated trading).
+- **Admin routes** at `/api/admin/*` (protected by `requireAdmin` middleware): `stats`, `users`, `users/:id` (PATCH/DELETE), `transactions`, `transactions/:id/approve`, `transactions/:id/reject`.
+- **Frontend page** at `/admin` (protected by client-side role check) with tabs: Overview, Pending Approvals, Users, All Transactions. Admin link only renders in the sidebar when `user.role === "admin"`.
+- **User management**: edit USD balance directly, add/subtract balance (logged as a transaction), change KYC status, promote/demote admin, suspend/reactivate, delete user (cascades to holdings + transactions).

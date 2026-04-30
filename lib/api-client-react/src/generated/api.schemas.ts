@@ -43,6 +43,21 @@ export const UserKycStatus = {
   unverified: "unverified",
   pending: "pending",
   verified: "verified",
+  rejected: "rejected",
+} as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
+export const UserRole = {
+  user: "user",
+  admin: "admin",
+} as const;
+
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
+export const UserStatus = {
+  active: "active",
+  suspended: "suspended",
 } as const;
 
 export interface User {
@@ -52,12 +67,77 @@ export interface User {
   experience: string;
   usdBalance: number;
   kycStatus: UserKycStatus;
+  role: UserRole;
+  status: UserStatus;
   createdAt: string;
 }
 
 export interface AuthResponse {
   user: User;
   message: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalAdmins: number;
+  verifiedUsers: number;
+  suspendedUsers: number;
+  totalUsdBalance: number;
+  totalCryptoValue: number;
+  pendingDeposits: number;
+  pendingWithdrawals: number;
+  completedTransactions: number;
+  totalVolumeUsd: number;
+}
+
+export interface AdminTransaction {
+  id: number;
+  userId: number;
+  userEmail: string;
+  userName: string;
+  type: string;
+  coin?: string | null;
+  symbol?: string | null;
+  amount?: number | null;
+  usdAmount: number;
+  price?: number | null;
+  status: string;
+  createdAt: string;
+}
+
+export type AdminUserUpdateKycStatus =
+  (typeof AdminUserUpdateKycStatus)[keyof typeof AdminUserUpdateKycStatus];
+
+export const AdminUserUpdateKycStatus = {
+  unverified: "unverified",
+  pending: "pending",
+  verified: "verified",
+  rejected: "rejected",
+} as const;
+
+export type AdminUserUpdateRole =
+  (typeof AdminUserUpdateRole)[keyof typeof AdminUserUpdateRole];
+
+export const AdminUserUpdateRole = {
+  user: "user",
+  admin: "admin",
+} as const;
+
+export type AdminUserUpdateStatus =
+  (typeof AdminUserUpdateStatus)[keyof typeof AdminUserUpdateStatus];
+
+export const AdminUserUpdateStatus = {
+  active: "active",
+  suspended: "suspended",
+} as const;
+
+export interface AdminUserUpdate {
+  usdBalance?: number;
+  kycStatus?: AdminUserUpdateKycStatus;
+  role?: AdminUserUpdateRole;
+  status?: AdminUserUpdateStatus;
+  adjustBalance?: number;
+  adjustReason?: string;
 }
 
 export interface KycSubmitRequest {
@@ -162,3 +242,13 @@ export interface CoinPrice {
   marketCap: number;
   icon: string;
 }
+
+export type GetAdminUsersParams = {
+  search?: string;
+};
+
+export type GetAdminTransactionsParams = {
+  status?: string;
+  type?: string;
+  userId?: number;
+};
