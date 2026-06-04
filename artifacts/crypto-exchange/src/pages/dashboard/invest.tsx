@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DashboardLayout } from "@/components/layout";
 import { Card, Button, Input } from "@/components/ui/shared";
 import { useAuth } from "@/hooks/use-auth";
@@ -130,6 +130,84 @@ const INVESTMENT_PLANS = [
 ];
 
 type Plan = typeof INVESTMENT_PLANS[0];
+
+const TV_SYMBOL_MAP: Record<string, string> = {
+  XAUUSD: "OANDA:XAUUSD",
+  XAGUSD: "TVC:SILVER",
+  EURUSD: "FX:EURUSD",
+  GBPUSD: "FX:GBPUSD",
+  USDJPY: "FX:USDJPY",
+  AUDUSD: "FX:AUDUSD",
+  USDCAD: "FX:USDCAD",
+  USDCHF: "FX:USDCHF",
+  AAPL: "NASDAQ:AAPL",
+  TSLA: "NASDAQ:TSLA",
+  MSFT: "NASDAQ:MSFT",
+  NVDA: "NASDAQ:NVDA",
+  BTC: "BINANCE:BTCUSDT",
+  ETH: "BINANCE:ETHUSDT",
+  BNB: "BINANCE:BNBUSDT",
+  SOL: "BINANCE:SOLUSDT",
+  XRP: "BINANCE:XRPUSDT",
+};
+
+function TradingViewChart({ symbol }: { symbol: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tvSymbol = TV_SYMBOL_MAP[symbol] ?? `FX:${symbol}`;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.innerHTML = "";
+
+    const widgetContainer = document.createElement("div");
+    widgetContainer.className = "tradingview-widget-container__widget";
+    container.appendChild(widgetContainer);
+
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbol: tvSymbol,
+      width: "100%",
+      height: 200,
+      locale: "en",
+      dateRange: "1D",
+      colorTheme: "dark",
+      trendLineColor: "rgba(240, 185, 11, 1)",
+      underLineColor: "rgba(240, 185, 11, 0.25)",
+      underLineBottomColor: "rgba(240, 185, 11, 0)",
+      isTransparent: true,
+      autosize: false,
+      chartOnly: true,
+      noTimeScale: false,
+    });
+    container.appendChild(script);
+
+    return () => {
+      if (container) container.innerHTML = "";
+    };
+  }, [tvSymbol]);
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-border bg-secondary/20 mb-4">
+      <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">forex.com</span>
+        <span className="text-[10px] text-muted-foreground">·</span>
+        <span className="text-[10px] font-mono text-primary">{tvSymbol}</span>
+        <span className="ml-auto flex items-center gap-1 text-[10px] text-green-400 font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
+        </span>
+      </div>
+      <div
+        ref={containerRef}
+        className="tradingview-widget-container"
+        style={{ height: 200 }}
+      />
+    </div>
+  );
+}
 
 function PlanModal({ plan, onClose, userBalance, onSuccess }: {
   plan: Plan;
@@ -689,7 +767,7 @@ export default function InvestPage() {
                     "absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-20",
                     selectedCoin.changePercent24h >= 0 ? "bg-green-500" : "bg-red-500"
                   )} />
-                  <div className="relative z-10 flex-1">
+                  <div className="relative z-10 flex-1 overflow-y-auto pr-1">
                     <div className="flex items-center gap-4 mb-6">
                       <span className="text-4xl">{selectedCoin.icon}</span>
                       <div>
@@ -697,13 +775,16 @@ export default function InvestPage() {
                         <p className="text-muted-foreground">{selectedCoin.name}</p>
                       </div>
                     </div>
-                    <div className="mb-8">
+                    <div className="mb-4">
                       <div className="text-3xl font-bold text-foreground">{formatCurrency(selectedCoin.price, 2, 6)}</div>
                       <div className={cn("flex items-center gap-1 text-sm font-medium mt-1", selectedCoin.changePercent24h >= 0 ? "text-green-400" : "text-red-400")}>
                         {selectedCoin.changePercent24h >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                         {formatPercent(Math.abs(selectedCoin.changePercent24h))} Today
                       </div>
                     </div>
+
+                    <TradingViewChart symbol={selectedCoin.symbol} />
+
                     <div className="flex bg-secondary p-1 rounded-xl mb-6">
                       <button onClick={() => { setTradeType("buy"); setTradeSuccess(null); }} className={cn("flex-1 py-2 text-sm font-semibold rounded-lg transition-all", tradeType === "buy" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>Buy</button>
                       <button onClick={() => { setTradeType("sell"); setTradeSuccess(null); }} className={cn("flex-1 py-2 text-sm font-semibold rounded-lg transition-all", tradeType === "sell" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>Sell</button>
