@@ -6,7 +6,7 @@ import { useGetMarketPrices, useGetForexPrices, useBuyCrypto, useSellCrypto, use
 import { formatCurrency, formatPercent, cn, formatCrypto } from "@/lib/utils";
 import {
   Search, TrendingUp, TrendingDown, Zap, Shield, Rocket, Crown, Star,
-  Check, ChevronRight, X, ArrowRight, Wallet, AlertCircle
+  Check, ChevronRight, X, ArrowRight, Wallet, AlertCircle, Maximize2, Minimize2
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -151,61 +151,162 @@ const TV_SYMBOL_MAP: Record<string, string> = {
   XRP: "BINANCE:XRPUSDT",
 };
 
-function TradingViewChart({ symbol }: { symbol: string }) {
+let tvScriptLoaded = false;
+let tvScriptCallbacks: (() => void)[] = [];
+
+function loadTvScript(cb: () => void) {
+  if (tvScriptLoaded) { cb(); return; }
+  tvScriptCallbacks.push(cb);
+  if (document.getElementById("tv-script")) return;
+  const s = document.createElement("script");
+  s.id = "tv-script";
+  s.src = "https://s3.tradingview.com/tv.js";
+  s.async = true;
+  s.onload = () => {
+    tvScriptLoaded = true;
+    tvScriptCallbacks.forEach(fn => fn());
+    tvScriptCallbacks = [];
+  };
+  document.head.appendChild(s);
+}
+
+let widgetIdCounter = 0;
+
+function TvChartInner({ tvSymbol, height, id }: { tvSymbol: string; height: number; id: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const tvSymbol = TV_SYMBOL_MAP[symbol] ?? `FX:${symbol}`;
+  const widgetRef = useRef<any>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.innerHTML = "";
+    const containerId = id;
+    let cancelled = false;
 
-    const widgetContainer = document.createElement("div");
-    widgetContainer.className = "tradingview-widget-container__widget";
-    container.appendChild(widgetContainer);
+    function buildWidget() {
+      if (cancelled) return;
+      const el = document.getElementById(containerId);
+      if (!el || !(window as any).TradingView) return;
+      if (widgetRef.current) {
+        try { widgetRef.current.remove(); } catch (_) {}
+        widgetRef.current = null;
+      }
+      el.innerHTML = "";
+      widgetRef.current = new (window as any).TradingView.widget({
+        autosize: true,
+        symbol: tvSymbol,
+        interval: "60",
+        timezone: "Etc/UTC",
+        theme: "dark",
+        style: "1",
+        locale: "en",
+        toolbar_bg: "#0d0d0d",
+        enable_publishing: false,
+        hide_top_toolbar: false,
+        hide_side_toolbar: false,
+        allow_symbol_change: false,
+        save_image: false,
+        container_id: containerId,
+        withdateranges: true,
+        hide_volume: false,
+        studies: [],
+        overrides: {
+          "paneProperties.background": "#0d0d0d",
+          "paneProperties.backgroundType": "solid",
+          "scalesProperties.lineColor": "#333",
+          "scalesProperties.textColor": "#888",
+          "mainSeriesProperties.candleStyle.upColor": "#22c55e",
+          "mainSeriesProperties.candleStyle.downColor": "#ef4444",
+          "mainSeriesProperties.candleStyle.borderUpColor": "#22c55e",
+          "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
+          "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
+          "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
+        },
+      });
+    }
 
-    const script = document.createElement("script");
-    script.type = "text/javascript";
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      symbol: tvSymbol,
-      width: "100%",
-      height: 200,
-      locale: "en",
-      dateRange: "1D",
-      colorTheme: "dark",
-      trendLineColor: "rgba(240, 185, 11, 1)",
-      underLineColor: "rgba(240, 185, 11, 0.25)",
-      underLineBottomColor: "rgba(240, 185, 11, 0)",
-      isTransparent: true,
-      autosize: false,
-      chartOnly: true,
-      noTimeScale: false,
-    });
-    container.appendChild(script);
+    loadTvScript(buildWidget);
 
     return () => {
-      if (container) container.innerHTML = "";
+      cancelled = true;
+      if (widgetRef.current) {
+        try { widgetRef.current.remove(); } catch (_) {}
+        widgetRef.current = null;
+      }
+      const el = document.getElementById(containerId);
+      if (el) el.innerHTML = "";
     };
-  }, [tvSymbol]);
+  }, [tvSymbol, id]);
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border bg-secondary/20 mb-4">
-      <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">forex.com</span>
-        <span className="text-[10px] text-muted-foreground">·</span>
-        <span className="text-[10px] font-mono text-primary">{tvSymbol}</span>
-        <span className="ml-auto flex items-center gap-1 text-[10px] text-green-400 font-semibold">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
-        </span>
+    <div
+      ref={containerRef}
+      id={id}
+      style={{ width: "100%", height }}
+    />
+  );
+}
+
+function TradingViewChart({ symbol }: { symbol: string }) {
+  const tvSymbol = TV_SYMBOL_MAP[symbol] ?? `FX:${symbol}`;
+  const [fullscreen, setFullscreen] = useState(false);
+  const idRef = useRef(`tv_${++widgetIdCounter}`);
+  const fsIdRef = useRef(`tv_fs_${widgetIdCounter}`);
+
+  useEffect(() => {
+    if (fullscreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [fullscreen]);
+
+  return (
+    <>
+      <div className="rounded-xl overflow-hidden border border-border bg-[#0d0d0d] mb-4">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50">
+          <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">forex.com</span>
+          <span className="text-[10px] text-muted-foreground">·</span>
+          <span className="text-[11px] font-mono text-foreground font-semibold">{tvSymbol}</span>
+          <span className="flex items-center gap-1 text-[10px] text-green-400 font-semibold ml-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
+          </span>
+          <button
+            onClick={() => setFullscreen(true)}
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-amber-400 transition-colors px-2 py-1 rounded-lg hover:bg-secondary"
+            title="Open fullscreen chart"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            Fullscreen
+          </button>
+        </div>
+        <TvChartInner tvSymbol={tvSymbol} height={300} id={idRef.current} />
       </div>
-      <div
-        ref={containerRef}
-        className="tradingview-widget-container"
-        style={{ height: 200 }}
-      />
-    </div>
+
+      {fullscreen && (
+        <div className="fixed inset-0 z-[100] bg-[#0d0d0d] flex flex-col">
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card shrink-0">
+            <span className="text-sm font-bold text-amber-400 uppercase tracking-wider">forex.com</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-mono font-bold text-foreground">{tvSymbol}</span>
+            <span className="flex items-center gap-1.5 text-xs text-green-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Live
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs text-muted-foreground hidden sm:block">TradingView Advanced Chart · Powered by forex.com</span>
+              <button
+                onClick={() => setFullscreen(false)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground bg-secondary hover:bg-border px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Minimize2 className="w-4 h-4" />
+                Exit
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            <TvChartInner tvSymbol={tvSymbol} height={window.innerHeight - 52} id={fsIdRef.current} />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
