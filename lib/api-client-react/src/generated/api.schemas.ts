@@ -105,6 +105,12 @@ export interface AdminTransaction {
   createdAt: string;
 }
 
+export interface AdminCreateRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
 export type AdminUserUpdateKycStatus =
   (typeof AdminUserUpdateKycStatus)[keyof typeof AdminUserUpdateKycStatus];
 

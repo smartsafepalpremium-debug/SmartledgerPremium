@@ -372,6 +372,84 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminTransaction"
 
+  /admin/kyc:
+    get:
+      operationId: getAdminKycQueue
+      tags: [admin]
+      summary: List users with pending KYC (admin only)
+      responses:
+        "200":
+          description: Pending KYC users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/kyc/{userId}/approve:
+    post:
+      operationId: approveAdminKyc
+      tags: [admin]
+      summary: Approve a user's KYC (admin only)
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: KYC approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/kyc/{userId}/reject:
+    post:
+      operationId: rejectAdminKyc
+      tags: [admin]
+      summary: Reject a user's KYC (admin only)
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: KYC rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/create-admin:
+    post:
+      operationId: adminCreateAdmin
+      tags: [admin]
+      summary: Create or promote an admin account (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateRequest"
+      responses:
+        "201":
+          description: Admin created or promoted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /transactions/convert:
     post:
       operationId: convertCrypto
@@ -622,6 +700,20 @@ components:
         - usdAmount
         - status
         - createdAt
+
+    AdminCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+      required:
+        - email
+        - password
+        - name
 
     AdminUserUpdate:
       type: object

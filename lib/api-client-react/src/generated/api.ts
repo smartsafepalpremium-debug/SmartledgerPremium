@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminCreateRequest,
   AdminStats,
   AdminTransaction,
   AdminUserUpdate,
@@ -1540,6 +1541,335 @@ export const useRejectAdminTransaction = <
   TContext
 > => {
   return useMutation(getRejectAdminTransactionMutationOptions(options));
+};
+
+/**
+ * @summary List users with pending KYC (admin only)
+ */
+export const getGetAdminKycQueueUrl = () => {
+  return `/api/admin/kyc`;
+};
+
+export const getAdminKycQueue = async (
+  options?: RequestInit,
+): Promise<User[]> => {
+  return customFetch<User[]>(getGetAdminKycQueueUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminKycQueueQueryKey = () => {
+  return [`/api/admin/kyc`] as const;
+};
+
+export const getGetAdminKycQueueQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminKycQueue>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminKycQueue>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminKycQueueQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminKycQueue>>
+  > = ({ signal }) => getAdminKycQueue({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminKycQueue>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminKycQueueQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminKycQueue>>
+>;
+export type GetAdminKycQueueQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List users with pending KYC (admin only)
+ */
+
+export function useGetAdminKycQueue<
+  TData = Awaited<ReturnType<typeof getAdminKycQueue>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminKycQueue>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminKycQueueQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Approve a user's KYC (admin only)
+ */
+export const getApproveAdminKycUrl = (userId: number) => {
+  return `/api/admin/kyc/${userId}/approve`;
+};
+
+export const approveAdminKyc = async (
+  userId: number,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getApproveAdminKycUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveAdminKycMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveAdminKyc>>,
+    TError,
+    { userId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveAdminKyc>>,
+  TError,
+  { userId: number },
+  TContext
+> => {
+  const mutationKey = ["approveAdminKyc"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveAdminKyc>>,
+    { userId: number }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return approveAdminKyc(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveAdminKycMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveAdminKyc>>
+>;
+
+export type ApproveAdminKycMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve a user's KYC (admin only)
+ */
+export const useApproveAdminKyc = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveAdminKyc>>,
+    TError,
+    { userId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveAdminKyc>>,
+  TError,
+  { userId: number },
+  TContext
+> => {
+  return useMutation(getApproveAdminKycMutationOptions(options));
+};
+
+/**
+ * @summary Reject a user's KYC (admin only)
+ */
+export const getRejectAdminKycUrl = (userId: number) => {
+  return `/api/admin/kyc/${userId}/reject`;
+};
+
+export const rejectAdminKyc = async (
+  userId: number,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getRejectAdminKycUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRejectAdminKycMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectAdminKyc>>,
+    TError,
+    { userId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectAdminKyc>>,
+  TError,
+  { userId: number },
+  TContext
+> => {
+  const mutationKey = ["rejectAdminKyc"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectAdminKyc>>,
+    { userId: number }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return rejectAdminKyc(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectAdminKycMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectAdminKyc>>
+>;
+
+export type RejectAdminKycMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject a user's KYC (admin only)
+ */
+export const useRejectAdminKyc = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectAdminKyc>>,
+    TError,
+    { userId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectAdminKyc>>,
+  TError,
+  { userId: number },
+  TContext
+> => {
+  return useMutation(getRejectAdminKycMutationOptions(options));
+};
+
+/**
+ * @summary Create or promote an admin account (admin only)
+ */
+export const getAdminCreateAdminUrl = () => {
+  return `/api/admin/create-admin`;
+};
+
+export const adminCreateAdmin = async (
+  adminCreateRequest: AdminCreateRequest,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getAdminCreateAdminUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminCreateRequest),
+  });
+};
+
+export const getAdminCreateAdminMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateAdmin>>,
+    TError,
+    { data: BodyType<AdminCreateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateAdmin>>,
+  TError,
+  { data: BodyType<AdminCreateRequest> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateAdmin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateAdmin>>,
+    { data: BodyType<AdminCreateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateAdmin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateAdminMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateAdmin>>
+>;
+export type AdminCreateAdminMutationBody = BodyType<AdminCreateRequest>;
+export type AdminCreateAdminMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create or promote an admin account (admin only)
+ */
+export const useAdminCreateAdmin = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateAdmin>>,
+    TError,
+    { data: BodyType<AdminCreateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateAdmin>>,
+  TError,
+  { data: BodyType<AdminCreateRequest> },
+  TContext
+> => {
+  return useMutation(getAdminCreateAdminMutationOptions(options));
 };
 
 /**

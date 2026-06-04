@@ -19,6 +19,11 @@ import {
   Edit,
   AlertTriangle,
   Wallet,
+  UserPlus,
+  FileCheck,
+  Crown,
+  UserX,
+  RefreshCw,
 } from "lucide-react";
 import {
   useGetAdminStats,
@@ -28,11 +33,15 @@ import {
   useDeleteAdminUser,
   useApproveAdminTransaction,
   useRejectAdminTransaction,
+  useGetAdminKycQueue,
+  useApproveAdminKyc,
+  useRejectAdminKyc,
+  useAdminCreateAdmin,
 } from "@workspace/api-client-react";
 import type { User, AdminTransaction } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
-type Tab = "overview" | "approvals" | "users" | "transactions";
+type Tab = "overview" | "approvals" | "kyc" | "users" | "transactions";
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
@@ -60,23 +69,28 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck className="w-6 h-6 text-amber-400" />
-              <h1 className="text-2xl md:text-3xl font-display font-bold">Admin Panel</h1>
+              <h1 className="text-2xl md:text-3xl font-display font-bold">Admin Control Panel</h1>
               <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
                 ADMIN
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Approve deposits & withdrawals, manage users, KYC, balances and full transaction history.
+              Full control: approve deposits & withdrawals, verify KYC, manage users, create admins, and audit all transactions.
             </p>
+          </div>
+          <div className="text-right text-xs text-muted-foreground">
+            <div className="font-semibold text-amber-300">{user.name}</div>
+            <div>{user.email}</div>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
+        <div className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
           {[
             { id: "overview", label: "Overview", icon: Activity },
-            { id: "approvals", label: "Pending Approvals", icon: Clock },
+            { id: "approvals", label: "Pending", icon: Clock },
+            { id: "kyc", label: "KYC Queue", icon: FileCheck },
             { id: "users", label: "Users", icon: Users },
-            { id: "transactions", label: "All Transactions", icon: TrendingUp },
+            { id: "transactions", label: "Transactions", icon: TrendingUp },
           ].map((t) => (
             <button
               key={t.id}
@@ -94,8 +108,9 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {tab === "overview" && <OverviewTab />}
+        {tab === "overview" && <OverviewTab onChangeTab={setTab} />}
         {tab === "approvals" && <ApprovalsTab />}
+        {tab === "kyc" && <KycTab />}
         {tab === "users" && <UsersTab />}
         {tab === "transactions" && <TransactionsTab />}
       </div>
@@ -103,9 +118,14 @@ export default function AdminPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, hint, accent }: { icon: any; label: string; value: string; hint?: string; accent?: string }) {
+function StatCard({ icon: Icon, label, value, hint, accent, onClick }: {
+  icon: any; label: string; value: string; hint?: string; accent?: string; onClick?: () => void;
+}) {
   return (
-    <div className="p-4 rounded-xl bg-card border border-border">
+    <div
+      className={cn("p-4 rounded-xl bg-card border border-border", onClick && "cursor-pointer hover:border-amber-500/50 transition-colors")}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", accent ?? "bg-primary/15")}>
           <Icon className={cn("w-4 h-4", accent ? "text-amber-400" : "text-primary")} />
@@ -118,8 +138,11 @@ function StatCard({ icon: Icon, label, value, hint, accent }: { icon: any; label
   );
 }
 
-function OverviewTab() {
-  const { data: stats, isLoading } = useGetAdminStats();
+function OverviewTab({ onChangeTab }: { onChangeTab: (t: Tab) => void }) {
+  const { data: stats, isLoading, refetch } = useGetAdminStats();
+  const { data: admins } = useGetAdminUsers({});
+  const adminList = useMemo(() => (admins ?? []).filter((u) => u.role === "admin"), [admins]);
+
   if (isLoading || !stats) {
     return <div className="text-muted-foreground text-sm">Loading stats...</div>;
   }
@@ -133,20 +156,53 @@ function OverviewTab() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={Clock} label="Pending Deposits" value={String(stats.pendingDeposits)} accent="bg-amber-500/15" />
-        <StatCard icon={Clock} label="Pending Withdrawals" value={String(stats.pendingWithdrawals)} accent="bg-amber-500/15" />
-        <StatCard icon={CheckCircle2} label="Completed Txns" value={String(stats.completedTransactions)} />
+        <StatCard icon={Clock} label="Pending Deposits" value={String(stats.pendingDeposits)} accent="bg-amber-500/15" onClick={() => onChangeTab("approvals")} />
+        <StatCard icon={Clock} label="Pending Withdrawals" value={String(stats.pendingWithdrawals)} accent="bg-amber-500/15" onClick={() => onChangeTab("approvals")} />
+        <StatCard icon={FileCheck} label="Pending KYC" value={String(stats.totalUsers - stats.verifiedUsers - stats.suspendedUsers)} accent="bg-amber-500/15" onClick={() => onChangeTab("kyc")} />
         <StatCard icon={TrendingUp} label="Total Volume" value={`$${stats.totalVolumeUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
       </div>
 
-      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <div className="font-semibold text-amber-200 mb-1">Approval workflow active</div>
-          <div className="text-amber-200/80">
-            All new deposits and withdrawals are <strong>pending</strong> until you approve them on the
-            Pending Approvals tab. KYC submissions also require your approval before users are marked verified.
+      {(stats.pendingDeposits > 0 || stats.pendingWithdrawals > 0) && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold text-amber-200 mb-1">Action required</div>
+            <div className="text-amber-200/80">
+              {stats.pendingDeposits} deposit{stats.pendingDeposits !== 1 ? "s" : ""} and{" "}
+              {stats.pendingWithdrawals} withdrawal{stats.pendingWithdrawals !== 1 ? "s" : ""} are waiting for your approval.{" "}
+              <button className="underline hover:text-amber-200" onClick={() => onChangeTab("approvals")}>Review now →</button>
+            </div>
           </div>
+        </div>
+      )}
+
+      <div className="rounded-xl bg-card border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-amber-400" />
+            <h2 className="font-display font-bold">Admin Accounts</h2>
+            <span className="text-xs text-muted-foreground">({adminList.length})</span>
+          </div>
+          <button onClick={() => refetch()} className="text-muted-foreground hover:text-foreground">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="divide-y divide-border">
+          {adminList.length === 0 && (
+            <div className="px-5 py-4 text-sm text-muted-foreground">No admins found.</div>
+          )}
+          {adminList.map((a) => (
+            <div key={a.id} className="px-5 py-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-sm">{a.name}</div>
+                <div className="text-xs text-muted-foreground">{a.email}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">ADMIN</span>
+                <KycChip status={a.kycStatus} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -169,20 +225,10 @@ function StatusBadge({ status }: { status: string }) {
 function TxRow({ tx, showActions, onChange }: { tx: AdminTransaction; showActions?: boolean; onChange: () => void }) {
   const queryClient = useQueryClient();
   const approve = useApproveAdminTransaction({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries();
-        onChange();
-      },
-    },
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); onChange(); } },
   });
   const reject = useRejectAdminTransaction({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries();
-        onChange();
-      },
-    },
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); onChange(); } },
   });
   const isBusy = approve.isPending || reject.isPending;
 
@@ -193,51 +239,27 @@ function TxRow({ tx, showActions, onChange }: { tx: AdminTransaction; showAction
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-semibold text-sm capitalize">{tx.type}</span>
             <StatusBadge status={tx.status} />
-            {tx.symbol && (
-              <span className="text-xs px-2 py-0.5 rounded bg-secondary text-foreground">{tx.symbol}</span>
-            )}
+            {tx.symbol && <span className="text-xs px-2 py-0.5 rounded bg-secondary text-foreground">{tx.symbol}</span>}
             <span className="text-xs text-muted-foreground">#{tx.id}</span>
           </div>
-          <div className="text-xs text-muted-foreground truncate">
-            {tx.userName} · {tx.userEmail}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {new Date(tx.createdAt).toLocaleString()}
-          </div>
+          <div className="text-xs text-muted-foreground truncate">{tx.userName} · {tx.userEmail}</div>
+          <div className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</div>
         </div>
         <div className="text-right">
-          <div className="font-display font-bold text-base">
-            ${tx.usdAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </div>
+          <div className="font-display font-bold text-base">${tx.usdAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
           {tx.amount != null && tx.symbol && (
-            <div className="text-xs text-muted-foreground">
-              {tx.amount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.symbol}
-            </div>
+            <div className="text-xs text-muted-foreground">{tx.amount.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.symbol}</div>
           )}
           {tx.coin && <div className="text-[11px] text-muted-foreground">{tx.coin}</div>}
         </div>
       </div>
       {showActions && tx.status === "pending" && (
         <div className="flex gap-2 mt-3 pt-3 border-t border-border">
-          <Button
-            size="sm"
-            variant="success"
-            disabled={isBusy}
-            onClick={() => approve.mutate({ id: tx.id })}
-            className="flex-1"
-          >
-            <CheckCircle2 className="w-4 h-4 mr-1" />
-            Approve
+          <Button size="sm" variant="success" disabled={isBusy} onClick={() => approve.mutate({ id: tx.id })} className="flex-1">
+            <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={isBusy}
-            onClick={() => reject.mutate({ id: tx.id })}
-            className="flex-1"
-          >
-            <XCircle className="w-4 h-4 mr-1" />
-            Reject
+          <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => reject.mutate({ id: tx.id })} className="flex-1">
+            <XCircle className="w-4 h-4 mr-1" /> Reject
           </Button>
         </div>
       )}
@@ -289,24 +311,117 @@ function ApprovalsTab() {
   );
 }
 
+function KycTab() {
+  const queryClient = useQueryClient();
+  const { data: users, isLoading, refetch } = useGetAdminKycQueue();
+  const approve = useApproveAdminKyc({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); refetch(); } },
+  });
+  const reject = useRejectAdminKyc({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); refetch(); } },
+  });
+
+  if (isLoading) return <div className="text-muted-foreground text-sm">Loading KYC queue...</div>;
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="p-12 rounded-xl bg-card border border-border text-center">
+        <FileCheck className="w-12 h-12 text-green-400 mx-auto mb-3" />
+        <h3 className="font-semibold mb-1">KYC queue is empty</h3>
+        <p className="text-sm text-muted-foreground">No pending KYC submissions to review.</p>
+      </div>
+    );
+  }
+
+  const isBusy = approve.isPending || reject.isPending;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Pending KYC Verifications ({users.length})
+        </h2>
+        <button onClick={() => refetch()} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      </div>
+      <div className="space-y-3">
+        {users.map((u) => (
+          <div key={u.id} className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">{u.name}</span>
+                  <KycChip status={u.kycStatus} />
+                  {u.role === "admin" && (
+                    <span className="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">ADMIN</span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">{u.email}</div>
+                <div className="text-xs text-muted-foreground">
+                  User #{u.id} · Joined {new Date(u.createdAt).toLocaleDateString()} · {u.experience}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">Balance</div>
+                <div className="font-display font-bold">${u.usdBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs text-muted-foreground mb-3">
+              KYC submitted — waiting for manual review. Use the buttons below to approve or reject this user's identity verification.
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="success"
+                className="flex-1"
+                disabled={isBusy}
+                onClick={() => approve.mutate({ userId: u.id })}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1" /> Approve KYC
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1"
+                disabled={isBusy}
+                onClick={() => reject.mutate({ userId: u.id })}
+              >
+                <XCircle className="w-4 h-4 mr-1" /> Reject KYC
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function UsersTab() {
   const [search, setSearch] = useState("");
   const { data: users, isLoading, refetch } = useGetAdminUsers({ search: search || undefined });
   const [editing, setEditing] = useState<User | null>(null);
+  const [showCreateAdmin, setShowCreateAdmin] = useState(false);
 
   if (isLoading) return <div className="text-muted-foreground text-sm">Loading users...</div>;
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search users by email, name or id..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by email, name or ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={() => setShowCreateAdmin(true)} className="shrink-0">
+          <UserPlus className="w-4 h-4 mr-2" /> Add Admin
+        </Button>
       </div>
+
       <div className="space-y-2">
         {users?.map((u) => (
           <div key={u.id} className="p-3 md:p-4 rounded-xl bg-card border border-border">
@@ -324,7 +439,7 @@ function UsersTab() {
                 </div>
                 <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                 <div className="text-xs text-muted-foreground">
-                  ID #{u.id} · Joined {new Date(u.createdAt).toLocaleDateString()} · Experience: {u.experience}
+                  ID #{u.id} · Joined {new Date(u.createdAt).toLocaleDateString()} · {u.experience}
                 </div>
               </div>
               <div className="text-right">
@@ -348,6 +463,9 @@ function UsersTab() {
 
       {editing && (
         <UserEditModal user={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refetch(); }} />
+      )}
+      {showCreateAdmin && (
+        <CreateAdminModal onClose={() => setShowCreateAdmin(false)} onSaved={() => { setShowCreateAdmin(false); refetch(); }} />
       )}
     </div>
   );
@@ -376,20 +494,10 @@ function UserEditModal({ user, onClose, onSaved }: { user: User; onClose: () => 
   const [status, setStatus] = useState(user.status);
 
   const update = useUpdateAdminUser({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries();
-        onSaved();
-      },
-    },
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); onSaved(); } },
   });
   const del = useDeleteAdminUser({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries();
-        onSaved();
-      },
-    },
+    mutation: { onSuccess: () => { queryClient.invalidateQueries(); onSaved(); } },
   });
 
   const submit = () => {
@@ -410,27 +518,32 @@ function UserEditModal({ user, onClose, onSaved }: { user: User; onClose: () => 
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="font-display font-bold text-lg">Manage User #{user.id}</h3>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-xs text-muted-foreground">{user.name} · {user.email}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><XCircle className="w-5 h-5" /></button>
         </div>
         <div className="p-5 space-y-4">
-          <Field label="USD Balance">
+          <Field label="Set USD Balance directly">
             <Input type="number" step="0.01" value={usdBalance} onChange={(e) => setUsdBalance(e.target.value)} />
           </Field>
           <Field label="Quick adjust (+/− USD, logs as transaction)">
-            <Input type="number" step="0.01" placeholder="e.g. 500 or -200" value={adjustBalance} onChange={(e) => setAdjustBalance(e.target.value)} />
+            <Input type="number" step="0.01" placeholder="e.g. +500 or -200" value={adjustBalance} onChange={(e) => setAdjustBalance(e.target.value)} />
           </Field>
           <Field label="KYC Status">
-            <Select value={kycStatus} onChange={(v) => setKycStatus(v as any)} options={["unverified", "pending", "verified", "rejected"]} />
+            <SelectField value={kycStatus} onChange={(v) => setKycStatus(v as any)} options={["unverified", "pending", "verified", "rejected"]} />
           </Field>
           <Field label="Role">
-            <Select value={role} onChange={(v) => setRole(v as any)} options={["user", "admin"]} />
+            <SelectField value={role} onChange={(v) => setRole(v as any)} options={["user", "admin"]} />
           </Field>
           <Field label="Account Status">
-            <Select value={status} onChange={(v) => setStatus(v as any)} options={["active", "suspended"]} />
+            <SelectField value={status} onChange={(v) => setStatus(v as any)} options={["active", "suspended"]} />
           </Field>
         </div>
+        {update.isError && (
+          <div className="mx-5 mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+            Failed to save. Please try again.
+          </div>
+        )}
         <div className="p-5 border-t border-border flex gap-2 flex-wrap">
           <Button onClick={submit} disabled={update.isPending} className="flex-1">
             {update.isPending ? "Saving..." : "Save Changes"}
@@ -439,12 +552,77 @@ function UserEditModal({ user, onClose, onSaved }: { user: User; onClose: () => 
             variant="destructive"
             disabled={del.isPending}
             onClick={() => {
-              if (confirm(`Permanently delete ${user.email}? This deletes all their holdings and transactions.`)) {
+              if (confirm(`Permanently delete ${user.email}? This removes all their holdings and transactions.`)) {
                 del.mutate({ id: user.id });
               }
             }}
           >
             <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateAdminModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+
+  const create = useAdminCreateAdmin({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries(); onSaved(); },
+    },
+  });
+
+  const submit = () => {
+    if (!email || !password || !name) return;
+    create.mutate({ data: { email, password, name } });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <Crown className="w-5 h-5 text-amber-400" />
+              <h3 className="font-display font-bold text-lg">Create Admin Account</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              If the email already exists, the user is promoted to admin. Otherwise a new admin account is created.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground ml-4 shrink-0"><XCircle className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <Field label="Admin Name">
+            <Input placeholder="e.g. John Smith" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="Email Address">
+            <Input type="email" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+          <Field label="Password">
+            <Input type="password" placeholder="Strong password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+        </div>
+        {create.isError && (
+          <div className="mx-5 mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+            {(create.error as any)?.message || "Failed to create admin. Check email and try again."}
+          </div>
+        )}
+        {create.isSuccess && (
+          <div className="mx-5 mb-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-400">
+            Admin account created / promoted successfully.
+          </div>
+        )}
+        <div className="p-5 border-t border-border flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={submit} disabled={create.isPending || !email || !password || !name} className="flex-1">
+            <UserPlus className="w-4 h-4 mr-2" />
+            {create.isPending ? "Creating..." : "Create Admin"}
           </Button>
         </div>
       </div>
@@ -461,7 +639,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
+function SelectField({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
   return (
     <select
       value={value}
@@ -487,9 +665,13 @@ function TransactionsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 flex-wrap">
-        <Select value={statusFilter} onChange={setStatusFilter} options={["", "pending", "completed", "rejected"]} />
-        <Select value={typeFilter} onChange={setTypeFilter} options={["", "deposit", "withdraw", "buy", "sell", "convert"]} />
+      <div className="flex gap-2 flex-wrap items-center">
+        <SelectField value={statusFilter} onChange={setStatusFilter} options={["", "pending", "completed", "rejected"]} />
+        <SelectField value={typeFilter} onChange={setTypeFilter} options={["", "deposit", "withdraw", "buy", "sell", "convert"]} />
+        <button onClick={() => refetch()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
+        </button>
+        <span className="text-xs text-muted-foreground ml-auto">{filtered.length} records</span>
       </div>
       {isLoading ? (
         <div className="text-muted-foreground text-sm">Loading transactions...</div>

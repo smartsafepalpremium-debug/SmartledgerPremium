@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import bcrypt from "bcryptjs";
 import { db, usersTable, holdingsTable, transactionsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAdmin } from "../lib/admin";
@@ -258,6 +259,86 @@ router.post("/transactions/:id/reject", async (req, res) => {
   await db.update(transactionsTable).set({ status: "rejected" }).where(eq(transactionsTable.id, id));
   req.log.info({ id, type: tx.type }, "admin.tx.rejected");
   res.json(await fetchTxWithUser(id));
+});
+
+// ── KYC management ──────────────────────────────────────────────────────────
+
+router.get("/kyc", async (_req, res) => {
+  const users = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.kycStatus, "pending"))
+    .orderBy(desc(usersTable.createdAt));
+  res.json(users.map(userToResponse));
+});
+
+router.post("/kyc/:userId/approve", async (req, res) => {
+  const userId = Number(req.params.userId);
+  if (Number.isNaN(userId)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  const [updated] = await db
+    .update(usersTable)
+    .set({ kycStatus: "verified" })
+    .where(eq(usersTable.id, userId))
+    .returning();
+  req.log.info({ userId }, "admin.kyc.approved");
+  res.json(userToResponse(updated));
+});
+
+router.post("/kyc/:userId/reject", async (req, res) => {
+  const userId = Number(req.params.userId);
+  if (Number.isNaN(userId)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  const [updated] = await db
+    .update(usersTable)
+    .set({ kycStatus: "rejected" })
+    .where(eq(usersTable.id, userId))
+    .returning();
+  req.log.info({ userId }, "admin.kyc.rejected");
+  res.json(userToResponse(updated));
+});
+
+// ── Create / promote admin ───────────────────────────────────────────────────
+
+router.post("/create-admin", async (req, res) => {
+  const { email, password, name } = req.body as { email?: string; password?: string; name?: string };
+  if (!email || !password || !name) {
+    res.status(400).json({ error: "email, password and name are required" });
+    return;
+  }
+  const normalised = email.toLowerCase().trim();
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, normalised)).limit(1);
+  if (existing) {
+    // Promote existing user to admin
+    const [updated] = await db
+      .update(usersTable)
+      .set({ role: "admin" })
+      .where(eq(usersTable.id, existing.id))
+      .returning();
+    req.log.info({ id: existing.id, email: normalised }, "admin.create-admin.promoted");
+    res.status(201).json(userToResponse(updated));
+    return;
+  }
+
+  const hashed = await bcrypt.hash(password, 12);
+  const [created] = await db
+    .insert(usersTable)
+    .values({
+      email: normalised,
+      password: hashed,
+      name: name.trim(),
+      experience: "expert",
+      usdBalance: 0,
+      role: "admin",
+      status: "active",
+      kycStatus: "verified",
+    })
+    .returning();
+  req.log.info({ id: created.id, email: normalised }, "admin.create-admin.created");
+  res.status(201).json(userToResponse(created));
 });
 
 export default router;

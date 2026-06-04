@@ -347,6 +347,69 @@ export const RejectAdminTransactionResponse = zod.object({
 });
 
 /**
+ * @summary List users with pending KYC (admin only)
+ */
+export const GetAdminKycQueueResponseItem = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
+  createdAt: zod.string(),
+});
+export const GetAdminKycQueueResponse = zod.array(GetAdminKycQueueResponseItem);
+
+/**
+ * @summary Approve a user's KYC (admin only)
+ */
+export const ApproveAdminKycParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const ApproveAdminKycResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Reject a user's KYC (admin only)
+ */
+export const RejectAdminKycParams = zod.object({
+  userId: zod.coerce.number(),
+});
+
+export const RejectAdminKycResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  experience: zod.string(),
+  usdBalance: zod.number(),
+  kycStatus: zod.enum(["unverified", "pending", "verified", "rejected"]),
+  role: zod.enum(["user", "admin"]),
+  status: zod.enum(["active", "suspended"]),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Create or promote an admin account (admin only)
+ */
+export const AdminCreateAdminBody = zod.object({
+  email: zod.string(),
+  password: zod.string(),
+  name: zod.string(),
+});
+
+/**
  * @summary Convert one cryptocurrency to another
  */
 export const ConvertCryptoBody = zod.object({
