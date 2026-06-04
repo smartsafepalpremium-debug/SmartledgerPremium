@@ -200,7 +200,7 @@ function loadTvScript(cb: () => void) {
 
 let widgetIdCounter = 0;
 
-function TvChartInner({ tvSymbol, height, id }: { tvSymbol: string; height: number; id: string }) {
+function TvChartInner({ tvSymbol, height, id }: { tvSymbol: string; height: number | string; id: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<any>(null);
 
@@ -272,7 +272,7 @@ function TvChartInner({ tvSymbol, height, id }: { tvSymbol: string; height: numb
   );
 }
 
-function TradingViewChart({ symbol }: { symbol: string }) {
+function TradingViewChart({ symbol, fillHeight }: { symbol: string; fillHeight?: boolean }) {
   const tvSymbol = TV_SYMBOL_MAP[symbol] ?? `FX:${symbol}`;
   const [fullscreen, setFullscreen] = useState(false);
   const idRef = useRef(`tv_${++widgetIdCounter}`);
@@ -286,6 +286,58 @@ function TradingViewChart({ symbol }: { symbol: string }) {
     }
     return () => { document.body.style.overflow = ""; };
   }, [fullscreen]);
+
+  if (fillHeight) {
+    return (
+      <>
+        <div className="h-full w-full flex flex-col overflow-hidden bg-[#0d0d0d]">
+          {/* mini header with fullscreen button */}
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/40 shrink-0">
+            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">forex.com</span>
+            <span className="text-[10px] text-muted-foreground">·</span>
+            <span className="text-[10px] font-mono text-muted-foreground">{tvSymbol}</span>
+            <span className="flex items-center gap-1 text-[10px] text-green-400 ml-1">
+              <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse" /> Live
+            </span>
+            <button
+              onClick={() => setFullscreen(true)}
+              className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-amber-400 transition-colors px-1.5 py-0.5 rounded hover:bg-secondary"
+            >
+              <Maximize2 className="w-3 h-3" /> Fullscreen
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <TvChartInner tvSymbol={tvSymbol} height="100%" id={idRef.current} />
+          </div>
+        </div>
+
+        {fullscreen && (
+          <div className="fixed inset-0 z-[100] bg-[#0d0d0d] flex flex-col">
+            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card shrink-0">
+              <span className="text-sm font-bold text-amber-400 uppercase tracking-wider">forex.com</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="font-mono font-bold text-foreground">{tvSymbol}</span>
+              <span className="flex items-center gap-1.5 text-xs text-green-400 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Live
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs text-muted-foreground hidden sm:block">TradingView Advanced Chart · Powered by forex.com</span>
+                <button
+                  onClick={() => setFullscreen(false)}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground bg-secondary hover:bg-border px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Minimize2 className="w-4 h-4" /> Exit
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0">
+              <TvChartInner tvSymbol={tvSymbol} height={window.innerHeight - 52} id={fsIdRef.current} />
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -1236,148 +1288,138 @@ export default function InvestPage() {
 
                 return (
                   <Card className="h-full flex flex-col overflow-hidden p-0">
-                    {/* Symbol header */}
-                    <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border">
-                      <span className="text-2xl">{selectedCoin.icon}</span>
+
+                    {/* ── TOP BAR: balance + symbol ─────────────────────── */}
+                    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card shrink-0">
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-base leading-none">{selectedCoin.symbol}</div>
-                        <div className="text-xs text-muted-foreground truncate">{selectedCoin.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{selectedCoin.icon}</span>
+                          <span className="font-bold text-sm">{selectedCoin.symbol}</span>
+                          <span className={cn("text-xs font-semibold", selectedCoin.changePercent24h >= 0 ? "text-green-400" : "text-red-400")}>
+                            {selectedCoin.changePercent24h >= 0 ? "▲" : "▼"}{formatPercent(Math.abs(selectedCoin.changePercent24h))}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">{selectedCoin.name}</div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="font-mono font-bold text-sm">{selectedCoin.price.toFixed(pip.decimals)}</div>
-                        <div className={cn("text-xs font-semibold", selectedCoin.changePercent24h >= 0 ? "text-green-400" : "text-red-400")}>
-                          {selectedCoin.changePercent24h >= 0 ? "▲" : "▼"} {formatPercent(Math.abs(selectedCoin.changePercent24h))}
-                        </div>
+                        <div className="text-xs text-muted-foreground">Balance</div>
+                        <div className="font-mono font-bold text-base text-foreground">{formatCurrency(maxBuy)}</div>
                       </div>
                     </div>
 
-                    {/* Chart */}
-                    <div className="px-0 pt-0">
-                      <TradingViewChart symbol={selectedCoin.symbol} />
+                    {/* ── CHART (flex-1 — fills all available height) ───── */}
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                      <TradingViewChart symbol={selectedCoin.symbol} fillHeight />
                     </div>
 
-                    {/* Bid / Ask prices */}
-                    <div className="grid grid-cols-2 gap-0 border-y border-border">
-                      <div className="flex flex-col items-center py-2.5 border-r border-border bg-red-500/5">
-                        <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-0.5">SELL · BID</span>
-                        <span className="font-mono font-extrabold text-red-400 text-lg leading-none">{bidPrice.toFixed(pip.decimals)}</span>
-                      </div>
-                      <div className="flex flex-col items-center py-2.5 bg-green-500/5">
-                        <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-0.5">BUY · ASK</span>
-                        <span className="font-mono font-extrabold text-green-400 text-lg leading-none">{askPrice.toFixed(pip.decimals)}</span>
-                      </div>
-                    </div>
+                    {/* ── CONTROLS: volume + SL/TP ─────────────────────── */}
+                    <div className="shrink-0 px-3 pt-3 pb-2 border-t border-border space-y-2 bg-card">
 
-                    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                      {/* Spread badge */}
-                      <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-                        <span className="h-px flex-1 bg-border" />
-                        Spread: <span className="font-bold text-amber-400">{spreadPips} pips</span>
-                        <span className="h-px flex-1 bg-border" />
-                      </div>
-
-                      {/* Volume */}
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Volume (Lots)</label>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setLots(v => Math.max(0.01, parseFloat(v) - 0.01).toFixed(2))}
-                            className="w-9 h-9 rounded-lg bg-secondary hover:bg-border font-bold text-lg transition-colors flex items-center justify-center shrink-0"
-                          >−</button>
-                          <Input
-                            value={lots}
-                            onChange={e => setLots(e.target.value)}
-                            className="text-center font-mono font-bold text-base h-9"
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setLots(v => (parseFloat(v) + 0.01).toFixed(2))}
-                            className="w-9 h-9 rounded-lg bg-secondary hover:bg-border font-bold text-lg transition-colors flex items-center justify-center shrink-0"
-                          >+</button>
+                      {/* Volume row */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 space-y-0.5">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Volume (Lots)</label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setLots(v => Math.max(0.01, parseFloat(v) - 0.01).toFixed(2))}
+                              className="w-8 h-8 rounded bg-secondary hover:bg-border font-bold text-base transition-colors flex items-center justify-center shrink-0"
+                            >−</button>
+                            <Input
+                              value={lots}
+                              onChange={e => setLots(e.target.value)}
+                              className="text-center font-mono font-bold text-sm h-8 px-1"
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setLots(v => (parseFloat(v) + 0.01).toFixed(2))}
+                              className="w-8 h-8 rounded bg-secondary hover:bg-border font-bold text-base transition-colors flex items-center justify-center shrink-0"
+                            >+</button>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-[11px] text-muted-foreground">
-                          <span>Margin: <span className={cn("font-semibold", canTrade ? "text-foreground" : "text-red-400")}>{formatCurrency(marginRequired)}</span></span>
-                          <span>Pip value: <span className="font-semibold text-foreground">{formatCurrency(pipVal)}/pip</span></span>
+                        <div className="shrink-0 text-right space-y-0.5">
+                          <div className="text-[10px] text-muted-foreground">Margin</div>
+                          <div className={cn("text-xs font-bold", canTrade ? "text-foreground" : "text-red-400")}>{formatCurrency(marginRequired)}</div>
+                          <div className="text-[10px] text-muted-foreground">{formatCurrency(pipVal)}/pip</div>
                         </div>
                       </div>
 
-                      {/* SL / TP */}
+                      {/* SL / TP row */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-red-400 uppercase tracking-wider">Stop Loss (pips)</label>
+                        <div>
+                          <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider block mb-0.5">SL (pips)</label>
                           <Input
                             value={slPips}
                             onChange={e => setSlPips(e.target.value)}
-                            placeholder="e.g. 50"
-                            className="h-9 text-sm font-mono"
+                            placeholder="0"
+                            className="h-8 text-sm font-mono px-2"
                             type="number"
                             min="0"
                           />
-                          {slNum > 0 && (
-                            <p className="text-[10px] text-red-400">Risk: {formatCurrency(slNum * pipVal)}</p>
-                          )}
+                          {slNum > 0 && <p className="text-[10px] text-red-400 mt-0.5">Risk: {formatCurrency(slNum * pipVal)}</p>}
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-bold text-green-400 uppercase tracking-wider">Take Profit (pips)</label>
+                        <div>
+                          <label className="text-[10px] font-bold text-green-400 uppercase tracking-wider block mb-0.5">TP (pips)</label>
                           <Input
                             value={tpPips}
                             onChange={e => setTpPips(e.target.value)}
-                            placeholder="e.g. 100"
-                            className="h-9 text-sm font-mono"
+                            placeholder="0"
+                            className="h-8 text-sm font-mono px-2"
                             type="number"
                             min="0"
                           />
-                          {tpNum > 0 && (
-                            <p className="text-[10px] text-green-400">Reward: {formatCurrency(tpNum * pipVal)}</p>
-                          )}
+                          {tpNum > 0 && <p className="text-[10px] text-green-400 mt-0.5">Reward: {formatCurrency(tpNum * pipVal)}</p>}
                         </div>
                       </div>
 
-                      {/* Balance */}
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground bg-secondary/40 rounded-lg px-3 py-2">
-                        <span>Available balance</span>
-                        <span className="font-bold text-foreground">{formatCurrency(maxBuy)}</span>
-                      </div>
-
-                      {/* Status */}
+                      {/* Status messages */}
                       {tradeSuccess && (
-                        <div className="text-green-400 text-xs text-center p-2 bg-green-500/10 rounded-lg font-medium flex items-center justify-center gap-1.5">
-                          <Check className="w-3.5 h-3.5" /> {tradeSuccess}
+                        <div className="text-green-400 text-[11px] text-center py-1.5 bg-green-500/10 rounded-lg font-medium flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> {tradeSuccess}
                         </div>
                       )}
                       {tradeError && (
-                        <div className="text-red-400 text-xs text-center p-2 bg-red-500/10 rounded-lg font-medium flex items-center justify-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5" /> {tradeError}
+                        <div className="text-red-400 text-[11px] text-center py-1.5 bg-red-500/10 rounded-lg font-medium flex items-center justify-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {tradeError}
                         </div>
                       )}
-
-                      {/* SELL / BUY buttons */}
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          onClick={() => openForexOrder("sell")}
-                          disabled={isPending || !canTrade}
-                          className="flex flex-col items-center py-3 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-                        >
-                          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">SELL</span>
-                          <span className="font-mono font-extrabold text-xl leading-none">{bidPrice.toFixed(pip.decimals)}</span>
-                        </button>
-                        <button
-                          onClick={() => openForexOrder("buy")}
-                          disabled={isPending || !canTrade}
-                          className="flex flex-col items-center py-3 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-                        >
-                          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">BUY</span>
-                          <span className="font-mono font-extrabold text-xl leading-none">{askPrice.toFixed(pip.decimals)}</span>
-                        </button>
-                      </div>
-                      {!canTrade && (
-                        <p className="text-[11px] text-red-400 text-center">Insufficient balance for this lot size</p>
-                      )}
                     </div>
+
+                    {/* ── SELL / BUY — pinned footer ────────────────────── */}
+                    <div className="shrink-0 grid grid-cols-2 border-t border-border">
+                      <button
+                        onClick={() => openForexOrder("sell")}
+                        disabled={isPending || !canTrade}
+                        className="flex flex-col items-center py-3.5 bg-red-500 hover:bg-red-600 active:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">Sell</span>
+                        <span className="font-mono font-extrabold text-xl leading-tight">{bidPrice.toFixed(pip.decimals)}</span>
+                        <span className="text-[10px] opacity-60 mt-0.5">{spreadPips} pips spread</span>
+                      </button>
+                      {/* Spread divider */}
+                      <div className="relative col-span-0">
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-card border border-border rounded-full px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          {spreadPips}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => openForexOrder("buy")}
+                        disabled={isPending || !canTrade}
+                        className="flex flex-col items-center py-3.5 bg-[#1565C0] hover:bg-[#1976D2] active:bg-[#0D47A1] disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
+                      >
+                        <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">Buy</span>
+                        <span className="font-mono font-extrabold text-xl leading-tight">{askPrice.toFixed(pip.decimals)}</span>
+                        <span className="text-[10px] opacity-60 mt-0.5">{formatCurrency(marginRequired)} margin</span>
+                      </button>
+                    </div>
+                    {!canTrade && (
+                      <div className="shrink-0 text-[11px] text-red-400 text-center py-1.5 bg-red-500/10 border-t border-red-500/20">
+                        Insufficient balance — reduce lot size
+                      </div>
+                    )}
                   </Card>
                 );
               })() : (
