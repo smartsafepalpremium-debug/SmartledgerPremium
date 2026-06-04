@@ -132,6 +132,33 @@ const INVESTMENT_PLANS = [
 
 type Plan = typeof INVESTMENT_PLANS[0];
 
+// ─── Pip & Lot Config ───────────────────────────────────────────────────────
+const PIP_MAP: Record<string, { size: number; decimals: number; lotUsd: number }> = {
+  XAUUSD: { size: 0.01,    decimals: 2, lotUsd: 1000 },
+  XAGUSD: { size: 0.001,   decimals: 3, lotUsd: 500  },
+  EURUSD: { size: 0.0001,  decimals: 5, lotUsd: 1000 },
+  GBPUSD: { size: 0.0001,  decimals: 5, lotUsd: 1000 },
+  USDJPY: { size: 0.01,    decimals: 3, lotUsd: 1000 },
+  AUDUSD: { size: 0.0001,  decimals: 5, lotUsd: 1000 },
+  USDCAD: { size: 0.0001,  decimals: 5, lotUsd: 1000 },
+  USDCHF: { size: 0.0001,  decimals: 5, lotUsd: 1000 },
+  AAPL:   { size: 0.01,    decimals: 2, lotUsd: 500  },
+  TSLA:   { size: 0.01,    decimals: 2, lotUsd: 500  },
+  MSFT:   { size: 0.01,    decimals: 2, lotUsd: 500  },
+  NVDA:   { size: 0.01,    decimals: 2, lotUsd: 500  },
+  BTC:    { size: 1,       decimals: 2, lotUsd: 2000 },
+  ETH:    { size: 0.1,     decimals: 2, lotUsd: 1000 },
+  BNB:    { size: 0.01,    decimals: 2, lotUsd: 500  },
+  SOL:    { size: 0.01,    decimals: 2, lotUsd: 500  },
+  XRP:    { size: 0.0001,  decimals: 4, lotUsd: 500  },
+};
+function getPip(symbol: string) {
+  return PIP_MAP[symbol] ?? { size: 0.0001, decimals: 5, lotUsd: 1000 };
+}
+// Pip value in USD per lot (simplified: pipSize * 10000 * lotUsd/100000)
+// We use a fixed $1/pip per lot for display simplicity
+function pipValuePerLot(_symbol: string) { return 1; }
+
 const TV_SYMBOL_MAP: Record<string, string> = {
   XAUUSD: "OANDA:XAUUSD",
   XAGUSD: "TVC:SILVER",
@@ -552,6 +579,10 @@ interface OrderPreview {
   usdAmount: number;
   price: number;
   coinAmount: number;
+  lots: number;
+  slPips: number | null;
+  tpPips: number | null;
+  pipVal: number;
 }
 
 function OrderPreviewModal({
@@ -566,83 +597,100 @@ function OrderPreviewModal({
   isPending: boolean;
 }) {
   const isBuy = preview.tradeType === "buy";
-  const spread = preview.price * 0.0002;
-  const fillPrice = isBuy ? preview.price + spread : preview.price - spread;
+  const pip = getPip(preview.symbol);
+  const spreadPips = 2;
+  const halfSpread = pip.size * spreadPips / 2;
+  const fillPrice = isBuy ? preview.price + halfSpread : preview.price - halfSpread;
+  const slPrice = preview.slPips ? (isBuy ? fillPrice - pip.size * preview.slPips : fillPrice + pip.size * preview.slPips) : null;
+  const tpPrice = preview.tpPips ? (isBuy ? fillPrice + pip.size * preview.tpPips : fillPrice - pip.size * preview.tpPips) : null;
+  const slRisk = preview.slPips ? preview.slPips * preview.pipVal : null;
+  const tpReward = preview.tpPips ? preview.tpPips * preview.pipVal : null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className={cn("px-6 py-4 flex items-center gap-3", isBuy ? "bg-green-500/10 border-b border-green-500/20" : "bg-red-500/10 border-b border-red-500/20")}>
+        <div className={cn("px-5 py-4 flex items-center gap-3", isBuy ? "bg-green-500/10 border-b border-green-500/20" : "bg-red-500/10 border-b border-red-500/20")}>
           <span className="text-2xl">{preview.icon}</span>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="font-bold text-foreground">{preview.symbol}</span>
-              <span className={cn("px-2 py-0.5 rounded text-xs font-bold tracking-wide", isBuy ? "bg-green-500 text-white" : "bg-red-500 text-white")}>
+              <span className={cn("px-2 py-0.5 rounded text-xs font-bold tracking-widest", isBuy ? "bg-green-500 text-white" : "bg-red-500 text-white")}>
                 {isBuy ? "BUY" : "SELL"}
               </span>
+              <span className="text-xs text-muted-foreground">Market</span>
             </div>
             <p className="text-xs text-muted-foreground">{preview.name}</p>
           </div>
-          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Fill price banner */}
+        <div className={cn("px-5 py-3 flex items-center justify-between border-b border-border", isBuy ? "bg-green-500/5" : "bg-red-500/5")}>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Est. Fill Price</span>
+          <span className={cn("font-mono font-extrabold text-2xl", isBuy ? "text-green-400" : "text-red-400")}>
+            {fillPrice.toFixed(pip.decimals)}
+          </span>
+        </div>
+
         {/* Order Details */}
-        <div className="px-6 py-5 space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Order Type</span>
-            <span className="font-semibold text-foreground">Market</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Market Price</span>
-            <span className="font-mono font-semibold text-foreground">{formatCurrency(preview.price, 2, 5)}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Spread</span>
-            <span className="font-mono text-amber-400">{formatCurrency(spread, 2, 5)}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Est. Fill Price</span>
-            <span className={cn("font-mono font-bold", isBuy ? "text-green-400" : "text-red-400")}>{formatCurrency(fillPrice, 2, 5)}</span>
-          </div>
-          <div className="border-t border-border my-1" />
-          <div className="flex justify-between items-center text-sm">
+        <div className="px-5 py-4 space-y-2.5">
+          <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Volume</span>
-            <span className="font-mono font-semibold text-foreground">{formatCrypto(preview.coinAmount, preview.symbol)}</span>
+            <span className="font-semibold text-foreground">{preview.lots} lots</span>
           </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Spread</span>
+            <span className="font-mono text-amber-400">{spreadPips} pips</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Pip value</span>
+            <span className="font-mono text-foreground">{formatCurrency(preview.pipVal)}/pip</span>
+          </div>
+          <div className="border-t border-border" />
+          {slPrice && (
+            <div className="flex justify-between text-sm">
+              <span className="text-red-400 font-semibold">Stop Loss</span>
+              <span className="font-mono text-red-400">{slPrice.toFixed(pip.decimals)} <span className="text-muted-foreground">({preview.slPips} pips · risk {formatCurrency(slRisk!)})</span></span>
+            </div>
+          )}
+          {tpPrice && (
+            <div className="flex justify-between text-sm">
+              <span className="text-green-400 font-semibold">Take Profit</span>
+              <span className="font-mono text-green-400">{tpPrice.toFixed(pip.decimals)} <span className="text-muted-foreground">({preview.tpPips} pips · reward {formatCurrency(tpReward!)})</span></span>
+            </div>
+          )}
+          <div className="border-t border-border" />
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">{isBuy ? "You Pay" : "You Receive"}</span>
+            <span className="text-sm text-muted-foreground">Required Margin</span>
             <span className="text-xl font-extrabold text-foreground">{formatCurrency(preview.usdAmount)}</span>
           </div>
         </div>
 
         {/* Warning */}
-        <div className="mx-6 mb-4 px-3 py-2.5 rounded-lg bg-secondary/60 border border-border text-xs text-muted-foreground flex items-start gap-2">
+        <div className="mx-5 mb-4 px-3 py-2 rounded-lg bg-secondary/60 border border-border text-xs text-muted-foreground flex items-start gap-2">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
-          Market orders execute instantly at the best available price. Prices may vary slightly.
+          Market orders fill instantly. Final price may differ slightly from displayed.
         </div>
 
         {/* Actions */}
-        <div className="px-6 pb-6 flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-          >
+        <div className="px-5 pb-5 flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={isPending}
             className={cn(
-              "flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2",
+              "flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all",
               isBuy ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600",
               isPending && "opacity-60 cursor-not-allowed"
             )}
           >
-            {isPending ? "Executing..." : `Confirm ${isBuy ? "Buy" : "Sell"}`}
+            {isPending ? "Executing..." : `Place ${isBuy ? "Buy" : "Sell"} Order`}
           </button>
         </div>
       </div>
@@ -849,11 +897,10 @@ export default function InvestPage() {
     }
   });
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<{ usdAmount: number }>({
-    resolver: zodResolver(tradeSchema)
-  });
-
-  const watchUsdAmount = watch("usdAmount");
+  // Forex-style form state
+  const [lots, setLots] = useState("0.01");
+  const [slPips, setSlPips] = useState("");
+  const [tpPips, setTpPips] = useState("");
 
   const filteredMarkets = markets?.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -863,20 +910,32 @@ export default function InvestPage() {
   const selectedCoin = markets?.find(c => c.symbol === selectedSymbol);
   const holding = portfolio?.holdings.find(h => h.symbol === selectedSymbol);
   const maxBuy = user?.usdBalance || 0;
-  const maxSell = holding ? holding.currentValue : 0;
 
-  const onTradeSubmit = (data: { usdAmount: number }) => {
+  const lotsNum = Math.max(0.01, parseFloat(lots) || 0.01);
+
+  const openForexOrder = (side: "buy" | "sell") => {
     if (!selectedSymbol || !selectedCoin) return;
     setTradeSuccess(null);
     setTradeError(null);
+    const pip = getPip(selectedSymbol);
+    const halfSpread = pip.size * 2 / 2;
+    const execPrice = side === "buy"
+      ? selectedCoin.price + halfSpread
+      : selectedCoin.price - halfSpread;
+    const usdAmount = lotsNum * pip.lotUsd;
+    const pipVal = pipValuePerLot(selectedSymbol) * lotsNum;
     setOrderPreview({
-      tradeType,
+      tradeType: side,
       symbol: selectedSymbol,
       name: selectedCoin.name,
       icon: selectedCoin.icon,
-      usdAmount: data.usdAmount,
-      price: selectedCoin.price,
-      coinAmount: data.usdAmount / selectedCoin.price,
+      usdAmount,
+      price: execPrice,
+      coinAmount: usdAmount / execPrice,
+      lots: lotsNum,
+      slPips: slPips ? parseFloat(slPips) : null,
+      tpPips: tpPips ? parseFloat(tpPips) : null,
+      pipVal,
     });
   };
 
@@ -890,13 +949,27 @@ export default function InvestPage() {
   };
 
   const handleClosePosition = (sym: string) => {
-    const holding = portfolio?.holdings.find(h => h.symbol === sym);
-    if (!holding) return;
+    const h = portfolio?.holdings.find(p => p.symbol === sym);
+    if (!h) return;
+    const mkt = markets?.find(m => m.symbol === sym);
     setSelectedSymbol(sym);
-    setTradeType("sell");
     setTradeSuccess(null);
     setTradeError(null);
-    setValue("usdAmount", holding.currentValue);
+    const pip = getPip(sym);
+    // Close at max available
+    setOrderPreview({
+      tradeType: "sell",
+      symbol: sym,
+      name: mkt?.name ?? sym,
+      icon: mkt?.icon ?? "💰",
+      usdAmount: h.currentValue,
+      price: mkt?.price ?? h.currentValue / h.quantity,
+      coinAmount: h.quantity,
+      lots: Math.max(0.01, parseFloat((h.currentValue / pip.lotUsd).toFixed(2))),
+      slPips: null,
+      tpPips: null,
+      pipVal: pipValuePerLot(sym),
+    });
   };
 
   const isPending = buyMutation.isPending || sellMutation.isPending;
@@ -1149,76 +1222,165 @@ export default function InvestPage() {
 
             {/* Trade Panel */}
             <div className="w-full lg:w-[400px] shrink-0">
-              {selectedCoin ? (
-                <Card className="p-6 h-full flex flex-col relative overflow-hidden">
-                  <div className={cn(
-                    "absolute top-0 right-0 w-64 h-64 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-20",
-                    selectedCoin.changePercent24h >= 0 ? "bg-green-500" : "bg-red-500"
-                  )} />
-                  <div className="relative z-10 flex-1 overflow-y-auto pr-1">
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="text-4xl">{selectedCoin.icon}</span>
-                      <div>
-                        <h2 className="text-2xl font-bold leading-none">{selectedCoin.symbol}</h2>
-                        <p className="text-muted-foreground">{selectedCoin.name}</p>
+              {selectedCoin ? (() => {
+                const pip = getPip(selectedCoin.symbol);
+                const halfSpread = pip.size;
+                const bidPrice = selectedCoin.price - halfSpread;
+                const askPrice = selectedCoin.price + halfSpread;
+                const spreadPips = 2;
+                const marginRequired = lotsNum * pip.lotUsd;
+                const pipVal = pipValuePerLot(selectedCoin.symbol) * lotsNum;
+                const canTrade = marginRequired <= maxBuy;
+                const slNum = parseFloat(slPips) || 0;
+                const tpNum = parseFloat(tpPips) || 0;
+
+                return (
+                  <Card className="h-full flex flex-col overflow-hidden p-0">
+                    {/* Symbol header */}
+                    <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border">
+                      <span className="text-2xl">{selectedCoin.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-base leading-none">{selectedCoin.symbol}</div>
+                        <div className="text-xs text-muted-foreground truncate">{selectedCoin.name}</div>
                       </div>
-                    </div>
-                    <div className="mb-4">
-                      <div className="text-3xl font-bold text-foreground">{formatCurrency(selectedCoin.price, 2, 6)}</div>
-                      <div className={cn("flex items-center gap-1 text-sm font-medium mt-1", selectedCoin.changePercent24h >= 0 ? "text-green-400" : "text-red-400")}>
-                        {selectedCoin.changePercent24h >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                        {formatPercent(Math.abs(selectedCoin.changePercent24h))} Today
+                      <div className="text-right shrink-0">
+                        <div className="font-mono font-bold text-sm">{selectedCoin.price.toFixed(pip.decimals)}</div>
+                        <div className={cn("text-xs font-semibold", selectedCoin.changePercent24h >= 0 ? "text-green-400" : "text-red-400")}>
+                          {selectedCoin.changePercent24h >= 0 ? "▲" : "▼"} {formatPercent(Math.abs(selectedCoin.changePercent24h))}
+                        </div>
                       </div>
                     </div>
 
-                    <TradingViewChart symbol={selectedCoin.symbol} />
-
-                    <div className="flex bg-secondary p-1 rounded-xl mb-6">
-                      <button onClick={() => { setTradeType("buy"); setTradeSuccess(null); }} className={cn("flex-1 py-2 text-sm font-semibold rounded-lg transition-all", tradeType === "buy" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>Buy</button>
-                      <button onClick={() => { setTradeType("sell"); setTradeSuccess(null); }} className={cn("flex-1 py-2 text-sm font-semibold rounded-lg transition-all", tradeType === "sell" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>Sell</button>
+                    {/* Chart */}
+                    <div className="px-0 pt-0">
+                      <TradingViewChart symbol={selectedCoin.symbol} />
                     </div>
-                    <form onSubmit={handleSubmit(onTradeSubmit)} className="space-y-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Amount (USD)</span>
-                          <span className="text-muted-foreground">Available: <span className="font-medium text-foreground">{formatCurrency(tradeType === "buy" ? maxBuy : maxSell)}</span></span>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
-                          <Input {...register("usdAmount")} placeholder="0.00" className="pl-8 pr-16 text-lg h-14" type="number" step="any" />
-                          <button type="button" onClick={() => setValue("usdAmount", tradeType === "buy" ? maxBuy : maxSell)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold bg-secondary hover:bg-border px-2 py-1 rounded-md transition-colors">MAX</button>
-                        </div>
-                        {errors.usdAmount && <p className="text-red-400 text-sm">{errors.usdAmount.message}</p>}
-                        {watchUsdAmount > 0 && !errors.usdAmount && (
-                          <div className="text-sm text-center p-3 bg-secondary/50 rounded-lg mt-2">
-                            ≈ <span className="font-mono font-medium text-foreground">{formatCrypto(watchUsdAmount / selectedCoin.price, selectedCoin.symbol)}</span>
-                          </div>
-                        )}
+
+                    {/* Bid / Ask prices */}
+                    <div className="grid grid-cols-2 gap-0 border-y border-border">
+                      <div className="flex flex-col items-center py-2.5 border-r border-border bg-red-500/5">
+                        <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-0.5">SELL · BID</span>
+                        <span className="font-mono font-extrabold text-red-400 text-lg leading-none">{bidPrice.toFixed(pip.decimals)}</span>
                       </div>
-                      {tradeSuccess && <div className="text-green-400 text-sm text-center p-2 bg-green-500/10 rounded-lg font-medium">{tradeSuccess}</div>}
-                      {tradeError && <div className="text-red-400 text-sm text-center p-2 bg-red-500/10 rounded-lg font-medium">{tradeError}</div>}
-                      <div className="flex gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-14 px-5 font-semibold"
-                          disabled={isPending}
-                          onClick={() => {
-                            reset();
-                            setTradeSuccess(null);
-                            setTradeError(null);
-                          }}
+                      <div className="flex flex-col items-center py-2.5 bg-green-500/5">
+                        <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-0.5">BUY · ASK</span>
+                        <span className="font-mono font-extrabold text-green-400 text-lg leading-none">{askPrice.toFixed(pip.decimals)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                      {/* Spread badge */}
+                      <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="h-px flex-1 bg-border" />
+                        Spread: <span className="font-bold text-amber-400">{spreadPips} pips</span>
+                        <span className="h-px flex-1 bg-border" />
+                      </div>
+
+                      {/* Volume */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Volume (Lots)</label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setLots(v => Math.max(0.01, parseFloat(v) - 0.01).toFixed(2))}
+                            className="w-9 h-9 rounded-lg bg-secondary hover:bg-border font-bold text-lg transition-colors flex items-center justify-center shrink-0"
+                          >−</button>
+                          <Input
+                            value={lots}
+                            onChange={e => setLots(e.target.value)}
+                            className="text-center font-mono font-bold text-base h-9"
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setLots(v => (parseFloat(v) + 0.01).toFixed(2))}
+                            className="w-9 h-9 rounded-lg bg-secondary hover:bg-border font-bold text-lg transition-colors flex items-center justify-center shrink-0"
+                          >+</button>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                          <span>Margin: <span className={cn("font-semibold", canTrade ? "text-foreground" : "text-red-400")}>{formatCurrency(marginRequired)}</span></span>
+                          <span>Pip value: <span className="font-semibold text-foreground">{formatCurrency(pipVal)}/pip</span></span>
+                        </div>
+                      </div>
+
+                      {/* SL / TP */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-red-400 uppercase tracking-wider">Stop Loss (pips)</label>
+                          <Input
+                            value={slPips}
+                            onChange={e => setSlPips(e.target.value)}
+                            placeholder="e.g. 50"
+                            className="h-9 text-sm font-mono"
+                            type="number"
+                            min="0"
+                          />
+                          {slNum > 0 && (
+                            <p className="text-[10px] text-red-400">Risk: {formatCurrency(slNum * pipVal)}</p>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-green-400 uppercase tracking-wider">Take Profit (pips)</label>
+                          <Input
+                            value={tpPips}
+                            onChange={e => setTpPips(e.target.value)}
+                            placeholder="e.g. 100"
+                            className="h-9 text-sm font-mono"
+                            type="number"
+                            min="0"
+                          />
+                          {tpNum > 0 && (
+                            <p className="text-[10px] text-green-400">Reward: {formatCurrency(tpNum * pipVal)}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Balance */}
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground bg-secondary/40 rounded-lg px-3 py-2">
+                        <span>Available balance</span>
+                        <span className="font-bold text-foreground">{formatCurrency(maxBuy)}</span>
+                      </div>
+
+                      {/* Status */}
+                      {tradeSuccess && (
+                        <div className="text-green-400 text-xs text-center p-2 bg-green-500/10 rounded-lg font-medium flex items-center justify-center gap-1.5">
+                          <Check className="w-3.5 h-3.5" /> {tradeSuccess}
+                        </div>
+                      )}
+                      {tradeError && (
+                        <div className="text-red-400 text-xs text-center p-2 bg-red-500/10 rounded-lg font-medium flex items-center justify-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5" /> {tradeError}
+                        </div>
+                      )}
+
+                      {/* SELL / BUY buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          onClick={() => openForexOrder("sell")}
+                          disabled={isPending || !canTrade}
+                          className="flex flex-col items-center py-3 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
                         >
-                          Cancel
-                        </Button>
-                        <Button type="submit" className={cn("flex-1 h-14 text-lg font-bold", tradeType === "buy" ? "bg-green-500 hover:bg-green-600 text-white" : "bg-red-500 hover:bg-red-600 text-white")} disabled={isPending || !watchUsdAmount}>
-                          {isPending ? "Processing..." : `${tradeType === "buy" ? "Buy" : "Sell"} ${selectedCoin.symbol}`}
-                        </Button>
+                          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">SELL</span>
+                          <span className="font-mono font-extrabold text-xl leading-none">{bidPrice.toFixed(pip.decimals)}</span>
+                        </button>
+                        <button
+                          onClick={() => openForexOrder("buy")}
+                          disabled={isPending || !canTrade}
+                          className="flex flex-col items-center py-3 rounded-xl bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                        >
+                          <span className="text-[11px] font-bold uppercase tracking-widest opacity-80">BUY</span>
+                          <span className="font-mono font-extrabold text-xl leading-none">{askPrice.toFixed(pip.decimals)}</span>
+                        </button>
                       </div>
-                    </form>
-                  </div>
-                </Card>
-              ) : (
+                      {!canTrade && (
+                        <p className="text-[11px] text-red-400 text-center">Insufficient balance for this lot size</p>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })() : (
                 <Card className="h-full flex items-center justify-center p-6 border-dashed bg-transparent shadow-none">
                   <div className="text-center text-muted-foreground">
                     <Search className="w-12 h-12 mx-auto mb-4 opacity-20" />
