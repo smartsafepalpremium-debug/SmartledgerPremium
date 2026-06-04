@@ -6,7 +6,8 @@ import { useGetMarketPrices, useGetForexPrices, useBuyCrypto, useSellCrypto, use
 import { formatCurrency, formatPercent, cn, formatCrypto } from "@/lib/utils";
 import {
   Search, TrendingUp, TrendingDown, Zap, Shield, Rocket, Crown, Star,
-  Check, ChevronRight, X, ArrowRight, Wallet, AlertCircle, Maximize2, Minimize2
+  Check, ChevronRight, X, ArrowRight, Wallet, AlertCircle, Maximize2, Minimize2,
+  ChevronDown, ChevronUp, BarChart2
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -542,6 +543,249 @@ function PlanModal({ plan, onClose, userBalance, onSuccess }: {
   );
 }
 
+// ─── Order Preview Modal ────────────────────────────────────────────────────
+interface OrderPreview {
+  tradeType: "buy" | "sell";
+  symbol: string;
+  name: string;
+  icon: string;
+  usdAmount: number;
+  price: number;
+  coinAmount: number;
+}
+
+function OrderPreviewModal({
+  preview,
+  onConfirm,
+  onCancel,
+  isPending,
+}: {
+  preview: OrderPreview;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const isBuy = preview.tradeType === "buy";
+  const spread = preview.price * 0.0002;
+  const fillPrice = isBuy ? preview.price + spread : preview.price - spread;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className={cn("px-6 py-4 flex items-center gap-3", isBuy ? "bg-green-500/10 border-b border-green-500/20" : "bg-red-500/10 border-b border-red-500/20")}>
+          <span className="text-2xl">{preview.icon}</span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-foreground">{preview.symbol}</span>
+              <span className={cn("px-2 py-0.5 rounded text-xs font-bold tracking-wide", isBuy ? "bg-green-500 text-white" : "bg-red-500 text-white")}>
+                {isBuy ? "BUY" : "SELL"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">{preview.name}</p>
+          </div>
+          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Order Details */}
+        <div className="px-6 py-5 space-y-3">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Order Type</span>
+            <span className="font-semibold text-foreground">Market</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Market Price</span>
+            <span className="font-mono font-semibold text-foreground">{formatCurrency(preview.price, 2, 5)}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Spread</span>
+            <span className="font-mono text-amber-400">{formatCurrency(spread, 2, 5)}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Est. Fill Price</span>
+            <span className={cn("font-mono font-bold", isBuy ? "text-green-400" : "text-red-400")}>{formatCurrency(fillPrice, 2, 5)}</span>
+          </div>
+          <div className="border-t border-border my-1" />
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Volume</span>
+            <span className="font-mono font-semibold text-foreground">{formatCrypto(preview.coinAmount, preview.symbol)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">{isBuy ? "You Pay" : "You Receive"}</span>
+            <span className="text-xl font-extrabold text-foreground">{formatCurrency(preview.usdAmount)}</span>
+          </div>
+        </div>
+
+        {/* Warning */}
+        <div className="mx-6 mb-4 px-3 py-2.5 rounded-lg bg-secondary/60 border border-border text-xs text-muted-foreground flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
+          Market orders execute instantly at the best available price. Prices may vary slightly.
+        </div>
+
+        {/* Actions */}
+        <div className="px-6 pb-6 flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isPending}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2",
+              isBuy ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600",
+              isPending && "opacity-60 cursor-not-allowed"
+            )}
+          >
+            {isPending ? "Executing..." : `Confirm ${isBuy ? "Buy" : "Sell"}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Open Positions Panel ───────────────────────────────────────────────────
+interface Holding {
+  symbol: string;
+  quantity: number;
+  averageBuyPrice: number;
+  currentValue: number;
+}
+
+interface Market {
+  symbol: string;
+  name: string;
+  icon: string;
+  price: number;
+  changePercent24h: number;
+}
+
+function OpenPositionsPanel({
+  holdings,
+  markets,
+  onClose,
+}: {
+  holdings: Holding[];
+  markets: Market[];
+  onClose: (symbol: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const positions = holdings
+    .filter(h => h.quantity > 0)
+    .map(h => {
+      const mkt = markets.find(m => m.symbol === h.symbol);
+      const currentPrice = mkt?.price ?? h.currentValue / h.quantity;
+      const pnl = (currentPrice - h.averageBuyPrice) * h.quantity;
+      const pnlPct = ((currentPrice - h.averageBuyPrice) / h.averageBuyPrice) * 100;
+      return { ...h, icon: mkt?.icon ?? "💰", name: mkt?.name ?? h.symbol, currentPrice, pnl, pnlPct };
+    });
+
+  const totalPnl = positions.reduce((acc, p) => acc + p.pnl, 0);
+
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden shrink-0">
+      {/* Panel header */}
+      <button
+        className="w-full flex items-center gap-3 px-4 py-3 border-b border-border hover:bg-secondary/30 transition-colors"
+        onClick={() => setCollapsed(v => !v)}
+      >
+        <BarChart2 className="w-4 h-4 text-muted-foreground" />
+        <span className="font-semibold text-sm">Open Positions</span>
+        {positions.length > 0 && (
+          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20">
+            {positions.length}
+          </span>
+        )}
+        {positions.length > 0 && (
+          <span className={cn("text-sm font-bold ml-1", totalPnl >= 0 ? "text-green-400" : "text-red-400")}>
+            {totalPnl >= 0 ? "+" : ""}{formatCurrency(totalPnl)}
+          </span>
+        )}
+        <span className="ml-auto text-muted-foreground">
+          {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+        </span>
+      </button>
+
+      {!collapsed && (
+        positions.length === 0 ? (
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+            <Wallet className="w-4 h-4 opacity-50" />
+            No open positions. Buy a market above to open one.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="text-xs text-muted-foreground uppercase bg-secondary/20 border-b border-border">
+                  <th className="px-4 py-2.5 font-medium text-left">Symbol</th>
+                  <th className="px-4 py-2.5 font-medium text-left">Side</th>
+                  <th className="px-4 py-2.5 font-medium text-right">Volume</th>
+                  <th className="px-4 py-2.5 font-medium text-right">Open Price</th>
+                  <th className="px-4 py-2.5 font-medium text-right">Current Price</th>
+                  <th className="px-4 py-2.5 font-medium text-right">P&amp;L</th>
+                  <th className="px-4 py-2.5 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {positions.map(pos => (
+                  <tr key={pos.symbol} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{pos.icon}</span>
+                        <div>
+                          <div className="font-bold text-foreground">{pos.symbol}</div>
+                          <div className="text-xs text-muted-foreground">{pos.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500/15 text-green-400 border border-green-500/20">
+                        BUY
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-foreground">
+                      {formatCrypto(pos.quantity, pos.symbol)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-muted-foreground">
+                      {formatCurrency(pos.averageBuyPrice, 2, 5)}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">
+                      {formatCurrency(pos.currentPrice, 2, 5)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className={cn("font-bold", pos.pnl >= 0 ? "text-green-400" : "text-red-400")}>
+                        {pos.pnl >= 0 ? "+" : ""}{formatCurrency(pos.pnl)}
+                      </div>
+                      <div className={cn("text-xs", pos.pnl >= 0 ? "text-green-500/70" : "text-red-500/70")}>
+                        {pos.pnl >= 0 ? "+" : ""}{pos.pnlPct.toFixed(2)}%
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => onClose(pos.symbol)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                      >
+                        Close
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 export default function InvestPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -569,30 +813,39 @@ export default function InvestPage() {
   const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [tradeSuccess, setTradeSuccess] = useState<string | null>(null);
   const [tradeError, setTradeError] = useState<string | null>(null);
+  const [orderPreview, setOrderPreview] = useState<OrderPreview | null>(null);
 
   const buyMutation = useBuyCrypto({
     mutation: {
       onSuccess: () => {
-        setTradeSuccess(`Successfully bought ${selectedSymbol}`);
+        setTradeSuccess(`Order filled — bought ${orderPreview?.symbol ?? selectedSymbol}`);
+        setOrderPreview(null);
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
         queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
         reset();
       },
-      onError: (err: any) => setTradeError(err.message || "Failed to complete trade"),
+      onError: (err: any) => {
+        setTradeError(err.message || "Failed to complete trade");
+        setOrderPreview(null);
+      },
     }
   });
 
   const sellMutation = useSellCrypto({
     mutation: {
       onSuccess: () => {
-        setTradeSuccess(`Successfully sold ${selectedSymbol}`);
+        setTradeSuccess(`Position closed — sold ${orderPreview?.symbol ?? selectedSymbol}`);
+        setOrderPreview(null);
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
         queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
         reset();
       },
-      onError: (err: any) => setTradeError(err.message || "Failed to complete trade"),
+      onError: (err: any) => {
+        setTradeError(err.message || "Failed to complete trade");
+        setOrderPreview(null);
+      },
     }
   });
 
@@ -613,14 +866,37 @@ export default function InvestPage() {
   const maxSell = holding ? holding.currentValue : 0;
 
   const onTradeSubmit = (data: { usdAmount: number }) => {
-    if (!selectedSymbol) return;
+    if (!selectedSymbol || !selectedCoin) return;
     setTradeSuccess(null);
     setTradeError(null);
-    if (tradeType === "buy") {
-      buyMutation.mutate({ data: { symbol: selectedSymbol, usdAmount: data.usdAmount } });
+    setOrderPreview({
+      tradeType,
+      symbol: selectedSymbol,
+      name: selectedCoin.name,
+      icon: selectedCoin.icon,
+      usdAmount: data.usdAmount,
+      price: selectedCoin.price,
+      coinAmount: data.usdAmount / selectedCoin.price,
+    });
+  };
+
+  const confirmOrder = () => {
+    if (!orderPreview) return;
+    if (orderPreview.tradeType === "buy") {
+      buyMutation.mutate({ data: { symbol: orderPreview.symbol, usdAmount: orderPreview.usdAmount } });
     } else {
-      sellMutation.mutate({ data: { symbol: selectedSymbol, usdAmount: data.usdAmount } });
+      sellMutation.mutate({ data: { symbol: orderPreview.symbol, usdAmount: orderPreview.usdAmount } });
     }
+  };
+
+  const handleClosePosition = (sym: string) => {
+    const holding = portfolio?.holdings.find(h => h.symbol === sym);
+    if (!holding) return;
+    setSelectedSymbol(sym);
+    setTradeType("sell");
+    setTradeSuccess(null);
+    setTradeError(null);
+    setValue("usdAmount", holding.currentValue);
   };
 
   const isPending = buyMutation.isPending || sellMutation.isPending;
@@ -636,6 +912,16 @@ export default function InvestPage() {
           onSuccess={(plan, amount) => {
             setActivePlans(prev => ({ ...prev, [plan.id]: amount }));
           }}
+        />
+      )}
+
+      {/* Order Preview Modal */}
+      {orderPreview && (
+        <OrderPreviewModal
+          preview={orderPreview}
+          onConfirm={confirmOrder}
+          onCancel={() => setOrderPreview(null)}
+          isPending={isPending}
         />
       )}
 
@@ -794,7 +1080,8 @@ export default function InvestPage() {
 
         {/* Spot Trade Tab */}
         {activeTab === "trade" && (
-          <div className="flex flex-col lg:flex-row gap-8" style={{ height: "calc(100vh - 230px)" }}>
+          <div className="flex flex-col gap-4">
+          <div className="flex flex-col lg:flex-row gap-8" style={{ height: "calc(100vh - 310px)" }}>
             {/* Markets List */}
             <div className="flex-1 flex flex-col min-h-0 bg-card rounded-2xl border border-border overflow-hidden">
               <div className="p-4 border-b border-border space-y-4">
@@ -940,6 +1227,13 @@ export default function InvestPage() {
                 </Card>
               )}
             </div>
+          </div>
+
+          <OpenPositionsPanel
+            holdings={(portfolio?.holdings ?? []) as Holding[]}
+            markets={(markets ?? []) as Market[]}
+            onClose={handleClosePosition}
+          />
           </div>
         )}
       </div>
