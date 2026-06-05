@@ -1311,101 +1311,11 @@ export default function InvestPage() {
                       </div>
                     </div>
 
-                    {/* ── CHART (flex-1) + pinned SELL/BUY footer passed into fullscreen ── */}
+                    {/* ── CHART (flex-1, fullscreen only — no trading controls) ── */}
                     <div className="flex-1 min-h-0 overflow-hidden">
                       <TradingViewChart
                         symbol={selectedCoin.symbol}
                         fillHeight
-                        tradeFooter={
-                          <>
-                            {/* Controls: volume + SL/TP */}
-                            <div className="px-3 pt-3 pb-2 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 space-y-0.5">
-                                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Volume (Lots)</label>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setLots(v => Math.max(0.01, parseFloat(v) - 0.01).toFixed(2))}
-                                      className="w-8 h-8 rounded bg-secondary hover:bg-border font-bold text-base transition-colors flex items-center justify-center shrink-0"
-                                    >−</button>
-                                    <Input
-                                      value={lots}
-                                      onChange={e => setLots(e.target.value)}
-                                      className="text-center font-mono font-bold text-sm h-8 px-1"
-                                      type="number"
-                                      step="0.01"
-                                      min="0.01"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => setLots(v => (parseFloat(v) + 0.01).toFixed(2))}
-                                      className="w-8 h-8 rounded bg-secondary hover:bg-border font-bold text-base transition-colors flex items-center justify-center shrink-0"
-                                    >+</button>
-                                  </div>
-                                </div>
-                                <div className="shrink-0 text-right space-y-0.5">
-                                  <div className="text-[10px] text-muted-foreground">Margin</div>
-                                  <div className={cn("text-xs font-bold", canTrade ? "text-foreground" : "text-red-400")}>{formatCurrency(marginRequired)}</div>
-                                  <div className="text-[10px] text-muted-foreground">{formatCurrency(pipVal)}/pip</div>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-[10px] font-bold text-red-400 uppercase tracking-wider block mb-0.5">SL (pips)</label>
-                                  <Input value={slPips} onChange={e => setSlPips(e.target.value)} placeholder="0" className="h-8 text-sm font-mono px-2" type="number" min="0" />
-                                  {slNum > 0 && <p className="text-[10px] text-red-400 mt-0.5">Risk: {formatCurrency(slNum * pipVal)}</p>}
-                                </div>
-                                <div>
-                                  <label className="text-[10px] font-bold text-green-400 uppercase tracking-wider block mb-0.5">TP (pips)</label>
-                                  <Input value={tpPips} onChange={e => setTpPips(e.target.value)} placeholder="0" className="h-8 text-sm font-mono px-2" type="number" min="0" />
-                                  {tpNum > 0 && <p className="text-[10px] text-green-400 mt-0.5">Reward: {formatCurrency(tpNum * pipVal)}</p>}
-                                </div>
-                              </div>
-                              {tradeSuccess && (
-                                <div className="text-green-400 text-[11px] text-center py-1.5 bg-green-500/10 rounded-lg font-medium flex items-center justify-center gap-1">
-                                  <Check className="w-3 h-3" /> {tradeSuccess}
-                                </div>
-                              )}
-                              {tradeError && (
-                                <div className="text-red-400 text-[11px] text-center py-1.5 bg-red-500/10 rounded-lg font-medium flex items-center justify-center gap-1">
-                                  <AlertCircle className="w-3 h-3" /> {tradeError}
-                                </div>
-                              )}
-                            </div>
-                            {/* SELL / BUY */}
-                            <div className="grid grid-cols-2 border-t border-border">
-                              <button
-                                onClick={() => openForexOrder("sell")}
-                                disabled={isPending || !canTrade}
-                                className="flex flex-col items-center py-3.5 bg-red-500 hover:bg-red-600 active:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
-                              >
-                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">Sell</span>
-                                <span className="font-mono font-extrabold text-xl leading-tight">{bidPrice.toFixed(pip.decimals)}</span>
-                                <span className="text-[10px] opacity-60 mt-0.5">{spreadPips} pips spread</span>
-                              </button>
-                              <div className="relative col-span-0">
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 bg-card border border-border rounded-full px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                                  {spreadPips}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => openForexOrder("buy")}
-                                disabled={isPending || !canTrade}
-                                className="flex flex-col items-center py-3.5 bg-[#1565C0] hover:bg-[#1976D2] active:bg-[#0D47A1] disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors"
-                              >
-                                <span className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-80">Buy</span>
-                                <span className="font-mono font-extrabold text-xl leading-tight">{askPrice.toFixed(pip.decimals)}</span>
-                                <span className="text-[10px] opacity-60 mt-0.5">{formatCurrency(marginRequired)} margin</span>
-                              </button>
-                            </div>
-                            {!canTrade && (
-                              <div className="text-[11px] text-red-400 text-center py-1.5 bg-red-500/10 border-t border-red-500/20">
-                                Insufficient balance — reduce lot size
-                              </div>
-                            )}
-                          </>
-                        }
                       />
                     </div>
 
