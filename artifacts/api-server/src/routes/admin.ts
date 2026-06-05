@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, holdingsTable, transactionsTable } from "@workspace/db";
+import { db, usersTable, holdingsTable, transactionsTable, siteSettingsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAdmin } from "../lib/admin";
 import { COIN_INFO } from "../lib/coins";
+import { DEFAULT_SETTINGS } from "./settings";
 
 const router: IRouter = Router();
 
@@ -339,6 +340,32 @@ router.post("/create-admin", async (req, res) => {
     .returning();
   req.log.info({ id: created.id, email: normalised }, "admin.create-admin.created");
   res.status(201).json(userToResponse(created));
+});
+
+// ── Site Settings ────────────────────────────────────────────────────────────
+
+router.get("/settings", async (_req, res) => {
+  const rows = await db.select().from(siteSettingsTable);
+  const result: Record<string, string> = { ...DEFAULT_SETTINGS };
+  rows.forEach((r) => { result[r.key] = r.value; });
+  res.json(result);
+});
+
+router.put("/settings", async (req, res) => {
+  const updates = req.body as Record<string, string>;
+  if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
+    res.status(400).json({ error: "Invalid body — expected a flat key/value object" });
+    return;
+  }
+  for (const [key, value] of Object.entries(updates)) {
+    if (typeof key !== "string" || typeof value !== "string") continue;
+    await db
+      .insert(siteSettingsTable)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value, updatedAt: new Date() } });
+  }
+  req.log.info({ keys: Object.keys(updates) }, "admin.settings.updated");
+  res.json({ ok: true });
 });
 
 export default router;

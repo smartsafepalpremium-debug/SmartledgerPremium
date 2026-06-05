@@ -1,10 +1,39 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { PublicLayout } from "@/components/layout";
 import { Button, Card } from "@/components/ui/shared";
 import { motion } from "framer-motion";
 import { ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
 
+const DEFAULTS = {
+  home_badge_text: "Trusted by 10M+ Users Worldwide",
+  home_hero_title: "Invest, trade, and hold crypto securely.",
+  home_hero_subtitle:
+    "Smartledger-premium provides a professional, high-liquidity environment for both beginners and institutional traders. Choose your path to get started.",
+  home_feature1_title: "Bank-grade Security",
+  home_feature1_desc: "Your assets are protected by industry-leading protocols.",
+  home_feature2_title: "Deep Liquidity",
+  home_feature2_desc: "Execute large trades instantly with minimal slippage.",
+};
+
 export default function LandingPage() {
+  const [cfg, setCfg] = useState(DEFAULTS);
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        setCfg((prev) => {
+          const next = { ...prev };
+          (Object.keys(DEFAULTS) as (keyof typeof DEFAULTS)[]).forEach((k) => {
+            if (data[k]) next[k] = data[k];
+          });
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <PublicLayout>
       <div className="flex-1 container mx-auto px-6 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-24 py-12 lg:py-0">
@@ -17,28 +46,36 @@ export default function LandingPage() {
           className="flex-1 max-w-2xl text-center lg:text-left"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-            <Zap className="w-4 h-4" /> Trusted by 10M+ Users Worldwide
+            <Zap className="w-4 h-4" /> {cfg.home_badge_text}
           </div>
           <h1 className="text-5xl md:text-7xl font-bold font-display leading-[1.1] mb-6">
-            Invest, trade, and hold <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">crypto</span> securely.
+            {cfg.home_hero_title.includes("crypto") ? (
+              <>
+                {cfg.home_hero_title.split("crypto")[0]}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">crypto</span>
+                {cfg.home_hero_title.split("crypto")[1]}
+              </>
+            ) : (
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{cfg.home_hero_title}</span>
+            )}
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto lg:mx-0">
-            Smartledger-premium provides a professional, high-liquidity environment for both beginners and institutional traders. Choose your path to get started.
+            {cfg.home_hero_subtitle}
           </p>
 
           <div className="grid grid-cols-2 gap-6 max-w-md mx-auto lg:mx-0 text-left">
             <div className="flex items-start gap-3">
-              <Shield className="w-6 h-6 text-primary mt-1" />
+              <Shield className="w-6 h-6 text-primary mt-1 shrink-0" />
               <div>
-                <h3 className="font-semibold text-foreground">Bank-grade Security</h3>
-                <p className="text-sm text-muted-foreground mt-1">Your assets are protected by industry-leading protocols.</p>
+                <h3 className="font-semibold text-foreground">{cfg.home_feature1_title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{cfg.home_feature1_desc}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <BarChart3 className="w-6 h-6 text-primary mt-1" />
+              <BarChart3 className="w-6 h-6 text-primary mt-1 shrink-0" />
               <div>
-                <h3 className="font-semibold text-foreground">Deep Liquidity</h3>
-                <p className="text-sm text-muted-foreground mt-1">Execute large trades instantly with minimal slippage.</p>
+                <h3 className="font-semibold text-foreground">{cfg.home_feature2_title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{cfg.home_feature2_desc}</p>
               </div>
             </div>
           </div>
@@ -46,7 +83,6 @@ export default function LandingPage() {
 
         {/* Right Cards */}
         <div className="flex-1 w-full max-w-md flex flex-col gap-6 relative">
-          {/* Background image behind cards */}
           <div className="absolute inset-0 -z-10 opacity-30 mix-blend-screen pointer-events-none overflow-hidden rounded-3xl">
             <img src={`${import.meta.env.BASE_URL}images/hero-abstract.png`} alt="Abstract crypto art" className="w-full h-full object-cover object-center scale-150" />
           </div>

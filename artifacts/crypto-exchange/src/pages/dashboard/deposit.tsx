@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout";
 import { useDeposit } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -204,6 +204,22 @@ export default function DepositPage() {
   const [submittedAt, setSubmittedAt] = useState("");
   const [copiedTx, setCopiedTx] = useState(false);
   const [copiedDepAddr, setCopiedDepAddr] = useState(false);
+  const [settingsAddrs, setSettingsAddrs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((r) => r.json())
+      .then(setSettingsAddrs)
+      .catch(() => {});
+  }, []);
+
+  const ADDR_KEY: Record<string, string> = {
+    btc: "payment_btc_address",
+    eth: "payment_eth_address",
+    usdt_trc20: "payment_usdt_trc20_address",
+    usdt_erc20: "payment_usdt_erc20_address",
+  };
+  const currentAddr = (ADDR_KEY[selected.id] && settingsAddrs[ADDR_KEY[selected.id]]) || selected.address;
 
   const { mutate, isPending } = useDeposit({
     mutation: {
@@ -247,12 +263,12 @@ export default function DepositPage() {
     setSubmittedNetwork(selected.network);
     setSubmittedIcon(selected.icon);
     setSubmittedSymbol(selected.symbol);
-    setSubmittedAddress(selected.address);
+    setSubmittedAddress(currentAddr);
     setSubmittedConfirmations(selected.confirmations);
     setSubmittedTime(selected.time);
     setSubmittedTxId(txId);
     setSubmittedAt(timestamp);
-    mutate({ data: { amount: num, method: selected.id, address: selected.address, symbol: selected.symbol } });
+    mutate({ data: { amount: num, method: selected.id, address: currentAddr, symbol: selected.symbol } });
   };
 
   if (success) {
@@ -513,10 +529,10 @@ export default function DepositPage() {
 
                 <div className="flex-1 w-full space-y-2">
                   <div className={cn("bg-background border rounded-xl px-4 py-3 font-mono text-xs text-foreground break-all leading-relaxed", selected.border)}>
-                    {selected.address}
+                    {currentAddr}
                   </div>
                   <button
-                    onClick={() => handleCopy(selected.address, "addr")}
+                    onClick={() => handleCopy(currentAddr, "addr")}
                     className={cn(
                       "w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border",
                       copiedAddr

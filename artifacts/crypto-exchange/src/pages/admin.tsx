@@ -24,6 +24,7 @@ import {
   Crown,
   UserX,
   RefreshCw,
+  Settings,
 } from "lucide-react";
 import {
   useGetAdminStats,
@@ -41,7 +42,7 @@ import {
 import type { User, AdminTransaction } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useQueryClient } from "@tanstack/react-query";
 
-type Tab = "overview" | "approvals" | "kyc" | "users" | "transactions";
+type Tab = "overview" | "approvals" | "kyc" | "users" | "transactions" | "settings";
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
@@ -91,6 +92,7 @@ export default function AdminPage() {
             { id: "kyc", label: "KYC Queue", icon: FileCheck },
             { id: "users", label: "Users", icon: Users },
             { id: "transactions", label: "Transactions", icon: TrendingUp },
+            { id: "settings", label: "Settings", icon: Settings },
           ].map((t) => (
             <button
               key={t.id}
@@ -113,6 +115,7 @@ export default function AdminPage() {
         {tab === "kyc" && <KycTab />}
         {tab === "users" && <UsersTab />}
         {tab === "transactions" && <TransactionsTab />}
+        {tab === "settings" && <SettingsTab />}
       </div>
     </DashboardLayout>
   );
@@ -650,6 +653,229 @@ function SelectField({ value, onChange, options }: { value: string; onChange: (v
         <option key={o} value={o} className="capitalize">{o}</option>
       ))}
     </select>
+  );
+}
+
+// ── Settings Tab ─────────────────────────────────────────────────────────────
+
+function SettingsField({
+  label, value, onChange, placeholder, mono, area, type,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; mono?: boolean; area?: boolean; type?: string;
+}) {
+  const cls = cn(
+    "w-full px-3 py-2.5 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder-muted-foreground/40 focus:outline-none focus:border-primary/50 transition-colors",
+    mono && "font-mono text-xs"
+  );
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</label>
+      {area ? (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3} className={cn(cls, "resize-y")} />
+      ) : (
+        <input type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} />
+      )}
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const [panel, setPanel] = useState<"payment" | "homepage" | "email">("payment");
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/settings", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => { setSettings(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const upd = (key: string, val: string) => setSettings((p) => ({ ...p, [key]: val }));
+  const s = (key: string, def = "") => settings[key] ?? def;
+
+  const saveSection = async (keys: string[]) => {
+    setSaving(true);
+    setSaveMsg(null);
+    const body: Record<string, string> = {};
+    keys.forEach((k) => { body[k] = settings[k] ?? ""; });
+    try {
+      const r = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error();
+      setSaveMsg("✓ Saved successfully");
+    } catch {
+      setSaveMsg("✗ Failed to save — please try again");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 4000);
+    }
+  };
+
+  const PAYMENT_KEYS = ["payment_btc_address","payment_eth_address","payment_usdt_trc20_address","payment_usdt_erc20_address","payment_bank_name","payment_bank_account_name","payment_bank_account_number","payment_bank_routing","payment_bank_swift"];
+  const HOME_KEYS = ["home_hero_title","home_hero_subtitle","home_badge_text","home_feature1_title","home_feature1_desc","home_feature2_title","home_feature2_desc"];
+  const EMAIL_KEYS = ["email_smtp_host","email_smtp_port","email_smtp_user","email_smtp_pass","email_from_name","email_from_address","email_support_address"];
+
+  if (loading) return <div className="text-muted-foreground text-sm py-8 text-center">Loading settings...</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Sub-tab selector */}
+      <div className="flex gap-1 p-1 bg-secondary rounded-xl w-fit">
+        {(["payment", "homepage", "email"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => { setPanel(p); setSaveMsg(null); }}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+              panel === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {p === "payment" ? "💳 Payment Details" : p === "homepage" ? "🏠 Homepage" : "📧 Email"}
+          </button>
+        ))}
+      </div>
+
+      {saveMsg && (
+        <div className={cn("p-3 rounded-xl text-sm text-center font-medium", saveMsg.startsWith("✓") ? "bg-green-500/10 border border-green-500/20 text-green-400" : "bg-red-500/10 border border-red-500/20 text-red-400")}>
+          {saveMsg}
+        </div>
+      )}
+
+      {/* ── PAYMENT PANEL ── */}
+      {panel === "payment" && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold flex items-center gap-2"><Wallet className="w-4 h-4 text-amber-400" /> Crypto Wallet Addresses</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Shown to users on the Deposit page. Change any address to redirect deposits.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <SettingsField label="Bitcoin (BTC)" value={s("payment_btc_address")} onChange={(v) => upd("payment_btc_address", v)} placeholder="bc1q..." mono />
+              <SettingsField label="Ethereum — ERC-20 (ETH)" value={s("payment_eth_address")} onChange={(v) => upd("payment_eth_address", v)} placeholder="0x..." mono />
+              <SettingsField label="USDT — TRC-20 (Tron)" value={s("payment_usdt_trc20_address")} onChange={(v) => upd("payment_usdt_trc20_address", v)} placeholder="T..." mono />
+              <SettingsField label="USDT — ERC-20 (Ethereum)" value={s("payment_usdt_erc20_address")} onChange={(v) => upd("payment_usdt_erc20_address", v)} placeholder="0x..." mono />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold flex items-center gap-2"><DollarSign className="w-4 h-4 text-amber-400" /> Bank Account Details</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Shown to users who choose fiat / bank transfer deposits.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingsField label="Bank Name" value={s("payment_bank_name")} onChange={(v) => upd("payment_bank_name", v)} placeholder="First National Bank" />
+                <SettingsField label="Account Name" value={s("payment_bank_account_name")} onChange={(v) => upd("payment_bank_account_name", v)} placeholder="Smartledger Premium LLC" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SettingsField label="Account Number" value={s("payment_bank_account_number")} onChange={(v) => upd("payment_bank_account_number", v)} placeholder="1234567890" mono />
+                <SettingsField label="Routing / Sort Code" value={s("payment_bank_routing")} onChange={(v) => upd("payment_bank_routing", v)} placeholder="021000021" mono />
+                <SettingsField label="SWIFT / BIC" value={s("payment_bank_swift")} onChange={(v) => upd("payment_bank_swift", v)} placeholder="FNBAUS33" mono />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveSection(PAYMENT_KEYS)} disabled={saving} className="min-w-[160px]">
+              {saving ? "Saving..." : "Save Payment Settings"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── HOMEPAGE PANEL ── */}
+      {panel === "homepage" && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold">Hero Section</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">The main headline visitors see on the homepage.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <SettingsField label="Badge Text" value={s("home_badge_text")} onChange={(v) => upd("home_badge_text", v)} placeholder="Trusted by 10M+ Users Worldwide" />
+              <SettingsField label="Hero Title" value={s("home_hero_title")} onChange={(v) => upd("home_hero_title", v)} placeholder="Invest, trade, and hold crypto securely." />
+              <SettingsField label="Hero Subtitle / Description" value={s("home_hero_subtitle")} onChange={(v) => upd("home_hero_subtitle", v)} placeholder="Platform description..." area />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold">Feature Highlights</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">The two bullet points shown under the hero text.</p>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-3 p-4 bg-secondary/50 rounded-xl border border-border">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Feature 1</p>
+                  <SettingsField label="Title" value={s("home_feature1_title")} onChange={(v) => upd("home_feature1_title", v)} placeholder="Bank-grade Security" />
+                  <SettingsField label="Description" value={s("home_feature1_desc")} onChange={(v) => upd("home_feature1_desc", v)} placeholder="Short description..." area />
+                </div>
+                <div className="space-y-3 p-4 bg-secondary/50 rounded-xl border border-border">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Feature 2</p>
+                  <SettingsField label="Title" value={s("home_feature2_title")} onChange={(v) => upd("home_feature2_title", v)} placeholder="Deep Liquidity" />
+                  <SettingsField label="Description" value={s("home_feature2_desc")} onChange={(v) => upd("home_feature2_desc", v)} placeholder="Short description..." area />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveSection(HOME_KEYS)} disabled={saving} className="min-w-[160px]">
+              {saving ? "Saving..." : "Save Homepage Settings"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── EMAIL PANEL ── */}
+      {panel === "email" && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold">SMTP Configuration</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Used to send automated emails (deposit confirmations, KYC updates, alerts).</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <SettingsField label="SMTP Host" value={s("email_smtp_host")} onChange={(v) => upd("email_smtp_host", v)} placeholder="smtp.gmail.com" />
+                </div>
+                <SettingsField label="Port" value={s("email_smtp_port")} onChange={(v) => upd("email_smtp_port", v)} placeholder="587" />
+              </div>
+              <SettingsField label="SMTP Username" value={s("email_smtp_user")} onChange={(v) => upd("email_smtp_user", v)} placeholder="user@gmail.com" />
+              <SettingsField label="SMTP Password" value={s("email_smtp_pass")} onChange={(v) => upd("email_smtp_pass", v)} placeholder="App password or API key" type="password" />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-display font-bold">Sender Identity</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingsField label="From Name" value={s("email_from_name")} onChange={(v) => upd("email_from_name", v)} placeholder="Smartledger Premium" />
+                <SettingsField label="From Email" value={s("email_from_address")} onChange={(v) => upd("email_from_address", v)} placeholder="noreply@smartledger.pro" />
+              </div>
+              <SettingsField label="Support Email" value={s("email_support_address")} onChange={(v) => upd("email_support_address", v)} placeholder="support@smartledger.pro" />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveSection(EMAIL_KEYS)} disabled={saving} className="min-w-[160px]">
+              {saving ? "Saving..." : "Save Email Settings"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

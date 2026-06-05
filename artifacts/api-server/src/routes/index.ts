@@ -5,6 +5,7 @@ import portfolioRouter from "./portfolio";
 import transactionsRouter from "./transactions";
 import marketRouter from "./market";
 import adminRouter from "./admin";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use("/portfolio", portfolioRouter);
 router.use("/transactions", transactionsRouter);
 router.use("/market", marketRouter);
 router.use("/admin", adminRouter);
+router.use("/settings", settingsRouter);
 
 export default router;

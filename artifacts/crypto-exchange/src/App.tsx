@@ -15,6 +15,7 @@ import WalletConnectPage from "@/pages/dashboard/wallet-connect";
 import LoanPage from "@/pages/dashboard/loan";
 import ConvertPage from "@/pages/dashboard/convert";
 import AdminPage from "@/pages/admin";
+import AdminLoginPage from "@/pages/admin-login";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/dashboard/loan"><ProtectedRoute component={LoanPage} /></Route>
 
       {/* Admin Panel */}
+      <Route path="/admin/login" component={AdminLoginPage} />
       <Route path="/admin"><ProtectedRoute component={AdminPage} /></Route>
 
       <Route>
