@@ -5,34 +5,10 @@ import { useGetPortfolio, useGetMarketPrices } from "@workspace/api-client-react
 import { formatCurrency, formatPercent, formatCrypto, cn } from "@/lib/utils";
 import { Link } from "wouter";
 import { Eye, EyeOff, History, LineChart, Search, ChevronDown, Plus, Send, ArrowLeftRight, X, CheckCircle2, ArrowUpRight, ArrowDownRight } from "lucide-react";
-
-const COIN_META: Record<string, { name: string; icon: string; color: string; bg: string; defaultPrice: number }> = {
-  BTC:   { name: "Bitcoin",   icon: "₿", color: "text-orange-400",  bg: "bg-orange-500/15 border-orange-500/30",   defaultPrice: 67500 },
-  ETH:   { name: "Ethereum",  icon: "Ξ", color: "text-blue-300",    bg: "bg-blue-500/15 border-blue-500/30",       defaultPrice: 3450 },
-  BNB:   { name: "BNB",       icon: "⬡", color: "text-yellow-400",  bg: "bg-yellow-500/15 border-yellow-500/30",   defaultPrice: 580 },
-  SOL:   { name: "Solana",    icon: "◎", color: "text-purple-300",  bg: "bg-purple-500/15 border-purple-500/30",   defaultPrice: 175 },
-  XRP:   { name: "XRP",       icon: "✕", color: "text-sky-300",     bg: "bg-sky-500/15 border-sky-500/30",         defaultPrice: 0.58 },
-  ADA:   { name: "Cardano",   icon: "₳", color: "text-blue-200",    bg: "bg-blue-400/15 border-blue-400/30",       defaultPrice: 0.45 },
-  DOGE:  { name: "Dogecoin",  icon: "Ð", color: "text-amber-300",   bg: "bg-amber-500/15 border-amber-500/30",     defaultPrice: 0.162 },
-  MATIC: { name: "Polygon",   icon: "⬢", color: "text-indigo-300",  bg: "bg-indigo-500/15 border-indigo-500/30",   defaultPrice: 0.87 },
-  DOT:   { name: "Polkadot",  icon: "●", color: "text-pink-300",    bg: "bg-pink-500/15 border-pink-500/30",       defaultPrice: 7.2 },
-  LINK:  { name: "Chainlink", icon: "⬡", color: "text-cyan-300",    bg: "bg-cyan-500/15 border-cyan-500/30",       defaultPrice: 18.5 },
-  USDT:  { name: "TetherUS",  icon: "₮", color: "text-emerald-300", bg: "bg-emerald-500/15 border-emerald-500/30", defaultPrice: 1.0 },
-  LTC:   { name: "Litecoin",  icon: "Ł", color: "text-slate-200",   bg: "bg-slate-400/15 border-slate-400/30",     defaultPrice: 92 },
-  TRX:   { name: "TRON",      icon: "⬤", color: "text-red-300",     bg: "bg-red-500/15 border-red-500/30",         defaultPrice: 0.12 },
-};
+import { CoinLogo } from "@/components/ui/CoinLogo";
+import { COIN_META } from "@/lib/coin-meta";
 
 const ALL_SYMBOLS = Object.keys(COIN_META);
-
-function CoinAvatar({ symbol, size = 10 }: { symbol: string; size?: 8 | 10 }) {
-  const m = COIN_META[symbol] ?? { icon: "•", color: "text-foreground", bg: "bg-secondary border-border" };
-  const sizeClass = size === 8 ? "w-8 h-8 text-base" : "w-10 h-10 text-lg";
-  return (
-    <div className={cn("rounded-full flex items-center justify-center font-bold border", sizeClass, m.bg, m.color)}>
-      {m.icon}
-    </div>
-  );
-}
 
 function DenominationPicker({
   value, onChange, onClose, prices,
@@ -63,7 +39,7 @@ function DenominationPicker({
                   value === sym && "bg-secondary/30"
                 )}
               >
-                <CoinAvatar symbol={sym} size={8} />
+                <CoinLogo symbol={sym} size={8} />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-foreground">{sym}</div>
                   <div className="text-xs text-muted-foreground">{m.name}</div>
@@ -282,7 +258,7 @@ export default function PortfolioPage() {
                     <Card key={r.symbol} className="p-4 hover:border-border/80 transition-colors">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">
-                          <CoinAvatar symbol={r.symbol} />
+                          <CoinLogo symbol={r.symbol} size={10} />
                           <div className="min-w-0">
                             <div className="font-bold text-foreground text-base leading-tight">{r.symbol}</div>
                             <div className="text-xs text-muted-foreground">{r.coinName}</div>
@@ -393,7 +369,7 @@ export default function PortfolioPage() {
                       <div key={r.symbol} className="px-4 py-4 hover:bg-secondary/20 transition-colors">
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-4 flex items-center gap-3 min-w-0">
-                            <CoinAvatar symbol={r.symbol} size={8} />
+                            <CoinLogo symbol={r.symbol} size={8} />
                             <div className="min-w-0">
                               <div className="font-bold text-foreground text-sm leading-tight">{r.symbol}</div>
                               <div className="text-[11px] text-muted-foreground truncate">{r.coinName}</div>

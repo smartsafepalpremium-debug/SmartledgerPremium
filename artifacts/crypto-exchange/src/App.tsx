@@ -18,6 +18,26 @@ import AdminPage from "@/pages/admin";
 import AdminLoginPage from "@/pages/admin-login";
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    smartsupp?: (...args: unknown[]) => void;
+  }
+}
+
+function SmartSuppController() {
+  const [location] = useLocation();
+  useEffect(() => {
+    const fn = window.smartsupp;
+    if (typeof fn !== "function") return;
+    if (location === "/") {
+      fn("chat:show");
+    } else {
+      fn("chat:hide");
+    }
+  }, [location]);
+  return null;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -93,6 +113,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
         <AuthProvider>
+          <SmartSuppController />
           <Router />
         </AuthProvider>
       </WouterRouter>

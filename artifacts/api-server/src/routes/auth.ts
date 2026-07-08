@@ -34,7 +34,7 @@ router.post("/register", async (req, res) => {
     password: hashedPassword,
     name,
     experience,
-    usdBalance: 10000,
+    usdBalance: 0,
   }).returning();
 
   req.session.userId = user.id;

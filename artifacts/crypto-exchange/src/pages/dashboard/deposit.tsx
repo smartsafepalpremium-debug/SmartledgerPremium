@@ -7,6 +7,7 @@ import {
   Copy, CheckCircle2, ArrowDownToLine, Clock, ShieldCheck,
   AlertTriangle, ChevronRight, Info, RefreshCw, Loader2, ExternalLink
 } from "lucide-react";
+import { CoinLogo } from "@/components/ui/CoinLogo";
 
 const CRYPTO_NETWORKS = [
   {
@@ -457,8 +458,8 @@ export default function DepositPage() {
                       : "border-transparent hover:bg-secondary/30"
                   )}
                 >
-                  <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-lg font-bold border shrink-0", coin.bg, coin.border, coin.color)}>
-                    {coin.icon}
+                  <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+                    <CoinLogo symbol={coin.symbol} size={9} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm font-semibold truncate", selected.id === coin.id ? coin.color : "text-foreground")}>{coin.label}</p>
@@ -479,8 +480,8 @@ export default function DepositPage() {
 
             {/* Coin header */}
             <div className={cn("flex items-center gap-3 px-5 py-4 rounded-2xl border", selected.bg, selected.border)}>
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold border", selected.bg, selected.border, selected.color)}>
-                {selected.icon}
+              <div className="w-12 h-12 flex items-center justify-center">
+                <CoinLogo symbol={selected.symbol} size={12} />
               </div>
               <div>
                 <p className="font-bold text-foreground">{selected.label}</p>
@@ -595,7 +596,7 @@ export default function DepositPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Amount Sent ({selected.symbol})</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-muted-foreground">{selected.icon}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2"><CoinLogo symbol={selected.symbol} size={6} /></span>
                   <input
                     type="number"
                     value={amount}
