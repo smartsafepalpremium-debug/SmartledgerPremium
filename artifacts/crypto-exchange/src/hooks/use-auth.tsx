@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetMe, useLogin, useLogout, useRegister } from "@workspace/api-client-react";
+import { useGetMe, useLogin, useLogout, useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, LoginRequest, RegisterRequest } from "@workspace/api-client-react/src/generated/api.schemas";
 
 type AuthContextType = {
@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginMutation = useLogin({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      onSuccess: (response) => {
+        queryClient.setQueryData(getGetMeQueryKey(), response.user);
         setLocation("/dashboard");
       }
     }
@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerMutation = useRegister({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      onSuccess: (response) => {
+        queryClient.setQueryData(getGetMeQueryKey(), response.user);
         setLocation("/dashboard");
       }
     }
