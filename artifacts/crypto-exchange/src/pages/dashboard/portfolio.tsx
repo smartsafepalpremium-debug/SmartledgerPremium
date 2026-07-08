@@ -57,7 +57,7 @@ function DenominationPicker({
 
 export default function PortfolioPage() {
   const { data: portfolio, isLoading } = useGetPortfolio();
-  const { data: marketData } = useGetMarketPrices({ query: { refetchInterval: 15000, refetchOnWindowFocus: true } });
+  const { data: marketData } = useGetMarketPrices({ query: { queryKey: ["/api/market/prices"], refetchInterval: 15000, refetchOnWindowFocus: true } });
   const [hideBalance, setHideBalance] = useState(false);
   const [view, setView] = useState<"overview" | "spot">("overview");
   const [tab, setTab] = useState<"crypto" | "account">("crypto");

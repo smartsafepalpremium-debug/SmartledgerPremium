@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetMe, useLogin, useLogout, useRegister, getGetMeQueryKey } from "@workspace/api-client-react";
-import type { User, LoginRequest, RegisterRequest } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { User, LoginRequest, RegisterRequest } from "@workspace/api-client-react";
 
 type AuthContextType = {
   user: User | null | undefined;
@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { data: user, isLoading, error } = useGetMe({
     query: {
+      queryKey: ["/api/auth/me"],
       retry: false,
       staleTime: Infinity,
     }

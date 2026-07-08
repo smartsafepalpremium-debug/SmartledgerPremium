@@ -87,7 +87,7 @@ function CoinPicker({
 export default function ConvertPage() {
   const queryClient = useQueryClient();
   const { data: portfolio, isLoading: pLoading } = useGetPortfolio();
-  const { data: marketData } = useGetMarketPrices({ query: { refetchInterval: 10000, refetchOnWindowFocus: true } });
+  const { data: marketData } = useGetMarketPrices({ query: { queryKey: ["/api/market/prices"], refetchInterval: 10000, refetchOnWindowFocus: true } });
 
   const holdings = portfolio?.holdings ?? [];
   const fromOptions = useMemo(

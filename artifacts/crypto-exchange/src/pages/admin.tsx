@@ -39,7 +39,7 @@ import {
   useRejectAdminKyc,
   useAdminCreateAdmin,
 } from "@workspace/api-client-react";
-import type { User, AdminTransaction } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { User, AdminTransaction } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 type Tab = "overview" | "approvals" | "kyc" | "users" | "transactions" | "settings";

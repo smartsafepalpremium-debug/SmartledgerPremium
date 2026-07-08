@@ -11,12 +11,13 @@ function LivePrice({ value }: { value: number }) {
   const prev = useRef(value);
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
   useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
     if (value !== prev.current) {
       setFlash(value > prev.current ? "up" : "down");
       prev.current = value;
-      const t = setTimeout(() => setFlash(null), 800);
-      return () => clearTimeout(t);
+      t = setTimeout(() => setFlash(null), 800);
     }
+    return () => { if (t !== undefined) clearTimeout(t); };
   }, [value]);
   return (
     <span
@@ -35,7 +36,7 @@ export default function DashboardOverview() {
   const { user } = useAuth();
   const { data: portfolio, isLoading: portfolioLoading } = useGetPortfolio();
   const { data: marketData, isLoading: marketLoading } = useGetMarketPrices({
-    query: { refetchInterval: 5000, refetchOnWindowFocus: true },
+    query: { queryKey: ["/api/market/prices"], refetchInterval: 5000, refetchOnWindowFocus: true },
   });
 
   if (!user) return null;

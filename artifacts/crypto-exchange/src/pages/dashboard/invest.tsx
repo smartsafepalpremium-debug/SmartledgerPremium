@@ -757,8 +757,8 @@ function OrderPreviewModal({
 // ─── Open Positions Panel ───────────────────────────────────────────────────
 interface Holding {
   symbol: string;
-  quantity: number;
-  averageBuyPrice: number;
+  amount: number;
+  avgBuyPrice: number;
   currentValue: number;
 }
 
@@ -782,12 +782,12 @@ function OpenPositionsPanel({
   const [collapsed, setCollapsed] = useState(false);
 
   const positions = holdings
-    .filter(h => h.quantity > 0)
+    .filter(h => h.amount > 0)
     .map(h => {
       const mkt = markets.find(m => m.symbol === h.symbol);
-      const currentPrice = mkt?.price ?? h.currentValue / h.quantity;
-      const pnl = (currentPrice - h.averageBuyPrice) * h.quantity;
-      const pnlPct = ((currentPrice - h.averageBuyPrice) / h.averageBuyPrice) * 100;
+      const currentPrice = mkt?.price ?? h.currentValue / h.amount;
+      const pnl = (currentPrice - h.avgBuyPrice) * h.amount;
+      const pnlPct = ((currentPrice - h.avgBuyPrice) / h.avgBuyPrice) * 100;
       return { ...h, icon: mkt?.icon ?? "💰", name: mkt?.name ?? h.symbol, currentPrice, pnl, pnlPct };
     });
 
@@ -855,10 +855,10 @@ function OpenPositionsPanel({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-foreground">
-                      {formatCrypto(pos.quantity, pos.symbol)}
+                      {formatCrypto(pos.amount, pos.symbol)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-muted-foreground">
-                      {formatCurrency(pos.averageBuyPrice, 2, 5)}
+                      {formatCurrency(pos.avgBuyPrice, 2, 5)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-semibold text-foreground">
                       {formatCurrency(pos.currentPrice, 2, 5)}
@@ -894,10 +894,10 @@ export default function InvestPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: cryptoMarkets } = useGetMarketPrices({
-    query: { refetchInterval: 5000, refetchOnWindowFocus: true },
+    query: { queryKey: ["/api/market/prices"], refetchInterval: 5000, refetchOnWindowFocus: true },
   });
   const { data: forexMarkets, isLoading: forexLoading } = useGetForexPrices({
-    query: { refetchInterval: 15000, refetchOnWindowFocus: true },
+    query: { queryKey: ["/api/market/forex"], refetchInterval: 15000, refetchOnWindowFocus: true },
   });
   const markets = forexMarkets;
   const isLoading = forexLoading;
@@ -957,6 +957,12 @@ export default function InvestPage() {
   const [lots, setLots] = useState("0.01");
   const [slPips, setSlPips] = useState("");
   const [tpPips, setTpPips] = useState("");
+
+  const reset = () => {
+    setLots("0.01");
+    setSlPips("");
+    setTpPips("");
+  };
 
   const filteredMarkets = markets?.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -1019,8 +1025,8 @@ export default function InvestPage() {
       name: mkt?.name ?? sym,
       icon: mkt?.icon ?? "💰",
       usdAmount: h.currentValue,
-      price: mkt?.price ?? h.currentValue / h.quantity,
-      coinAmount: h.quantity,
+      price: mkt?.price ?? h.currentValue / h.amount,
+      coinAmount: h.amount,
       lots: Math.max(0.01, parseFloat((h.currentValue / pip.lotUsd).toFixed(2))),
       slPips: null,
       tpPips: null,
