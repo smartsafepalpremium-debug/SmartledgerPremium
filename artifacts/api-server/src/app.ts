@@ -1,11 +1,17 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
+
+const PgStore = connectPg(session);
 
 const app: Express = express();
+
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
@@ -33,13 +39,18 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
+    store: new PgStore({
+      pool,
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET || "crypto-exchange-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "lax",
     },
   }),
 );
